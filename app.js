@@ -222,7 +222,7 @@
   /* ================= lançamento em massa: início de trabalho ================= */
   const INICIO_TRABALHO = {
     "rian ramos": "2026-10-28", "vladimir": "2026-10-28",
-    "ramon": "2026-11-11", "ramom": "2026-11-11",
+    "ramon": "2026-11-11", "ramom": "2026-11-11", "ramão": "2026-11-11",
     "robson": "2026-11-12",
     "kleniton": "2026-10-29", "klenitom": "2026-10-29",
     "anderson souza": "2026-11-03",
