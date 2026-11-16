@@ -258,6 +258,9 @@
   /* feriados nacionais no período (não trabalha) */
   const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
 
+  /* horários usados no lançamento em massa (podem ser trocados na tela) */
+  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30", sabado: "12:00" };
+
   function chaveNome(nome) {
     return (nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   }
@@ -266,37 +269,104 @@
     return `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   }
 
-  /** aplica 07:00-11:30 / 13:00-16:30 (sábado 07:00-12:00) em todos os dias úteis desde o início */
-  function lancarPeriodo() {
-    const a = Number($("#ano").value), m = Number($("#mes").value);
-    const hoje = new Date();
-    let total = 0, nomes = [];
+  /** data de início de cada funcionário (nome parecido com a chave de INICIO_TRABALHO) */
+  function inicioDoFuncionario(f) {
+    const ch = chaveNome(f.nome);
+    let inicio = null;
+    Object.keys(INICIO_TRABALHO).forEach((k) => {
+      if (ch.includes(k)) inicio = INICIO_TRABALHO[k];
+    });
+    return inicio || INICIO_PADRAO;
+  }
+
+  /** "YYYY-MM-DD" -> Date local */
+  function dataDeISO(iso) {
+    const [a, m, d] = String(iso).split("-").map(Number);
+    return new Date(a, (m || 1) - 1, d || 1);
+  }
+
+  /** hoje, sem horas */
+  function hojeZero() {
+    const h = new Date();
+    return new Date(h.getFullYear(), h.getMonth(), h.getDate());
+  }
+
+  /** data ISO da tela (input type=date) */
+  function dataInputISO(sel) {
+    const v = $(sel) ? $(sel).value : "";
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "";
+  }
+
+  /** horários digitados na tela (com o padrão quando vazio) */
+  function horariosLancamento() {
+    const ler = (sel, padrao) => { const v = $(sel) ? $(sel).value : ""; return /^\d{1,2}:\d{2}$/.test(v) ? v : padrao; };
+    return {
+      e: ler("#lpEntrada", HORARIOS_PADRAO.e),
+      sa: ler("#lpSaidaAlmoco", HORARIOS_PADRAO.sa),
+      r: ler("#lpRetorno", HORARIOS_PADRAO.r),
+      s: ler("#lpSaida", HORARIOS_PADRAO.s),
+      sabado: ler("#lpSaidaSabado", HORARIOS_PADRAO.sabado)
+    };
+  }
+
+  /**
+   * Lança dia(s) de trabalho para os funcionários escolhidos.
+   * deISO/ateISO: período (inclusive). soFuncionarios: Set de ids (vazio = todos).
+   * padraoInicio: data usada quando o funcionário não tem data própria em INICIO_TRABALHO.
+   */
+  function lancarPeriodo(deISO, ateISO, soFuncionarios, padraoInicio) {
+    const de = deISO ? dataDeISO(deISO) : null;
+    const ate = ateISO ? dataDeISO(ateISO) : hojeZero();
+    const h = horariosLancamento();
+    const hoje = hojeZero();
+    let total = 0, nomes = 0;
     estado.funcionarios.forEach((f) => {
-      const ch = chaveNome(f.nome);
-      let inicio = null;
-      Object.keys(INICIO_TRABALHO).forEach((k) => {
-        if (ch.includes(k)) inicio = INICIO_TRABALHO[k];
-      });
-      if (!inicio) inicio = INICIO_PADRAO;
-      nomes.push(f.nome.split(" ")[0]);
-      const d0 = new Date(inicio + "T00:00:00");
-      for (let d = 1; d <= diasNoMes(a, m); d++) {
-        const data = new Date(a, m - 1, d);
-        if (data < d0) continue;
+      if (soFuncionarios && soFuncionarios.size && !soFuncionarios.has(f.id)) return;
+      let inicio = padraoInicio ? dataDeISO(padraoInicio) : dataDeISO(inicioDoFuncionario(f));
+      if (de && inicio < de) inicio = de;
+      nomes++;
+      for (let data = new Date(inicio); data <= ate; data.setDate(data.getDate() + 1)) {
+        const a = data.getFullYear(), m = data.getMonth() + 1, d = data.getDate();
         if (data > hoje) continue;
         if (data.getDay() === 0) continue;                  // domingo = folga
         if (FERIADOS.includes(dataISO(a, m, d))) continue;  // feriado
         const r = garantirReg(f.id, a, m, d);
-        if (r.marca === "F" || r.marca === "FE") continue;  // respeita falta/folga já lançada
-        r.e = "07:00"; r.sa = "11:30"; r.r = "13:00";
-        r.s = data.getDay() === 6 ? "12:00" : "16:30";
+        if (r.marca === "F" || r.marca === "FE") continue;  // respeita falta/férias já lançadas
+        r.e = h.e; r.sa = h.sa; r.r = h.r;
+        r.s = data.getDay() === 6 ? h.sabado : h.s;
         r.marca = ""; r.extra = ""; r.fator = "";
         total++;
       }
     });
     salvar(true);
     renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
-    toast(`Lançados ${total} dia(s) de trabalho para ${nomes.length} funcionário(s).`);
+    toast(`Lançados ${total} dia(s) de trabalho para ${nomes} funcionário(s).`);
+    return total;
+  }
+
+  /** botão antigo: do início de cada um até hoje, em todos os meses do caminho */
+  function lancarDoInicioAteHoje() {
+    const hoje = hojeZero();
+    let total = 0;
+    const a0 = new Date(hoje);
+    a0.setMonth(a0.getMonth() - 6);
+    estado.funcionarios.forEach((f) => {
+      const inicio = dataDeISO(inicioDoFuncionario(f));
+      for (let data = new Date(inicio); data <= hoje; data.setDate(data.getDate() + 1)) {
+        const a = data.getFullYear(), m = data.getMonth() + 1, d = data.getDate();
+        if (data.getDay() === 0) continue;
+        if (FERIADOS.includes(dataISO(a, m, d))) continue;
+        const r = garantirReg(f.id, a, m, d);
+        if (r.marca === "F" || r.marca === "FE") continue;
+        r.e = HORARIOS_PADRAO.e; r.sa = HORARIOS_PADRAO.sa; r.r = HORARIOS_PADRAO.r;
+        r.s = data.getDay() === 6 ? HORARIOS_PADRAO.sabado : HORARIOS_PADRAO.s;
+        r.marca = ""; r.extra = ""; r.fator = "";
+        total++;
+      }
+    });
+    salvar(true);
+    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    toast(`Lançados ${total} dia(s) de trabalho (do início até hoje).`);
   }
 
   function idsSelecionados() {
@@ -721,7 +791,40 @@
     toast(`Hora extra até ${estado.config.horaExtra}.`);
   });
 
-  $("#btnLancarPeriodo").addEventListener("click", lancarPeriodo);
+  /* ---- lançar período escolhido na tela ---- */
+  function renderLancarPeriodo() {
+    const hoje = hojeZero();
+    const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    if ($("#lpDe") && !$("#lpDe").value) $("#lpDe").value = iso(hoje);
+    if ($("#lpAte") && !$("#lpAte").value) $("#lpAte").value = iso(hoje);
+    if ($("#lpAte")) $("#lpAte").max = iso(hoje);
+    if ($("#lpDe")) $("#lpDe").max = iso(hoje);
+    if ($("#lpEntrada") && !$("#lpEntrada").value) $("#lpEntrada").value = HORARIOS_PADRAO.e;
+    if ($("#lpSaidaAlmoco") && !$("#lpSaidaAlmoco").value) $("#lpSaidaAlmoco").value = HORARIOS_PADRAO.sa;
+    if ($("#lpRetorno") && !$("#lpRetorno").value) $("#lpRetorno").value = HORARIOS_PADRAO.r;
+    if ($("#lpSaida") && !$("#lpSaida").value) $("#lpSaida").value = HORARIOS_PADRAO.s;
+    if ($("#lpSaidaSabado") && !$("#lpSaidaSabado").value) $("#lpSaidaSabado").value = HORARIOS_PADRAO.sabado;
+  }
+
+  function executarLancarPeriodo() {
+    const de = dataInputISO("#lpDe");
+    const ate = dataInputISO("#lpAte");
+    if (!de) { toast("Escolha a data de início."); return; }
+    if (!ate) { toast("Escolha a data final."); return; }
+    if (dataDeISO(de) > dataDeISO(ate)) { toast("A data de início é depois da data final."); return; }
+    const sel = idsSelecionados();
+    const escopo = sel.size ? `${sel.size} selecionado(s)` : `TODOS os ${estado.funcionarios.length} funcionários`;
+    const h = horariosLancamento();
+    const msg = `Lançar trabalho de ${de.split("-").reverse().join("/")} até ${ate.split("-").reverse().join("/")}\n` +
+      `para ${escopo}?\n\n${h.e}–${h.sa} / ${h.r}–${h.s} (sábado até ${h.sabado})\n` +
+      `Sem domingos e sem feriados. Os dias já lançados serão substituídos.`;
+    if (!confirm(msg)) return;
+    lancarPeriodo(de, ate, sel, null);
+  }
+
+  if ($("#btnLancarEscolhido")) $("#btnLancarEscolhido").addEventListener("click", executarLancarPeriodo);
+  $("#btnLancarPeriodo").addEventListener("click", lancarDoInicioAteHoje);
+  renderLancarPeriodo();
   $("#btnSaidaPadrao").addEventListener("click", () => marcarSaidaSelecionados(estado.config.saidaPadrao || "16:30"));
   $("#btnSaida16").addEventListener("click", () => { marcarSaidaSelecionados("16:00"); });
   $("#btnSaida18").addEventListener("click", () => { marcarSaidaSelecionados(estado.config.horaExtra || "18:00"); });
