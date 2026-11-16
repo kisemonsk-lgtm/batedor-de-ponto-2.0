@@ -83,7 +83,7 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 2;
+  const LISTA_VERSAO = 3;
   function sincronizarListaInicial(d) {
     if (!d || d.listaVersao === LISTA_VERSAO) return d;
     const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -92,7 +92,12 @@
     let proximo = d.funcionarios.length + 1;
     let adicionados = 0;
     FUNCIONARIOS_INICIAIS.forEach(([nome, funcao]) => {
-      if (atuais.indexOf(chave(nome)) !== -1) return;
+      const pos = atuais.indexOf(chave(nome));
+      if (pos !== -1) {                       // já existe: acerta a função pela lista oficial
+        const f = d.funcionarios[pos];
+        if (funcao && f.funcao !== funcao) f.funcao = funcao;
+        return;
+      }
       while (usados.has("f" + proximo)) proximo++;
       const id = "f" + proximo;
       usados.add(id);
@@ -1302,7 +1307,7 @@
       const ex = r ? minutosExtras(r) : 0;
       linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}">
         <td class="d-num">${pad(d)}</td>
-        <td class="d-sem">${["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][wd]}</td>
+        <td class="d-sem">${SEMANA[wd]}</td>
         <td>${r ? escapar(r.e || "") : ""}</td>
         <td>${r ? escapar(r.sa || "") : ""}</td>
         <td>${r ? escapar(r.r || "") : ""}</td>
