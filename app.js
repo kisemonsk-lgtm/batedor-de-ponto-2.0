@@ -25,7 +25,7 @@
       const bruto = localStorage.getItem(CHAVE);
       if (bruto) {
         const dados = JSON.parse(bruto);
-        if (dados && Array.isArray(dados.funcionarios) && dados.funcionarios.length) return normalizar(dados);
+        if (dados && Array.isArray(dados.funcionarios) && dados.funcionarios.length) return normalizar(sincronizarListaInicial(dados));
       }
       // lista principal vazia ou corrompida: tenta o backup automático
       const reserva = lerBackupFuncionarios();
@@ -76,6 +76,30 @@
       const blob = new Blob([JSON.stringify({ funcionarios: lista }, null, 2)], { type: "application/json" });
       localStorage.setItem("cas-ponto-funcionarios-arquivo", JSON.stringify({ tamanho: blob.size }));
     } catch (e) {}
+  }
+
+  /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
+  /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
+  const LISTA_VERSAO = 2;
+  function sincronizarListaInicial(d) {
+    if (!d || d.listaVersao === LISTA_VERSAO) return d;
+    const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+    const atuais = d.funcionarios.map((f) => chave(f.nome));
+    const usados = new Set(d.funcionarios.map((f) => f.id));
+    let proximo = d.funcionarios.length + 1;
+    let adicionados = 0;
+    FUNCIONARIOS_INICIAIS.forEach(([nome, funcao]) => {
+      if (atuais.indexOf(chave(nome)) !== -1) return;
+      while (usados.has("f" + proximo)) proximo++;
+      const id = "f" + proximo;
+      usados.add(id);
+      d.funcionarios.push({ id, nome, funcao, ativo: true });
+      atuais.push(chave(nome));
+      adicionados++;
+    });
+    d.listaVersao = LISTA_VERSAO;
+    if (adicionados) console.info(adicionados + " funcionário(s) novo(s) da lista inicial");
+    return d;
   }
 
   let salvarTimer = null;
