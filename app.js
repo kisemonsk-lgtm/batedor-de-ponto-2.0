@@ -57,12 +57,16 @@
   }
 
   function normalizar(d) {
-    d.funcionarios = (d.funcionarios || []).map((f, i) => ({
-      id: f.id || "f" + (i + 1),
-      nome: String(f.nome || "").trim(),
-      funcao: String(f.funcao || "").trim(),
-      ativo: f.ativo !== false
-    }));
+    d.funcionarios = (d.funcionarios || []).map((f, i) => {
+      const o = {
+        id: f.id || "f" + (i + 1),
+        nome: String(f.nome || "").trim(),
+        funcao: String(f.funcao || "").trim(),
+        ativo: f.ativo !== false
+      };
+      if (f.novo) o.novo = true;      // mantém a marca "novo" de quem foi cadastrado na tela
+      return o;
+    });
     d.registros = d.registros || {};
     d.config = Object.assign({ horaEntrada: "07:00", horaSaida: "16:30", cargaDiaria: 8, tolerancia: 5, valorHora: 0, diasUteis: 22, fator: 50, horaPadrao: "07:00", saidaPadrao: "16:30", almocoPadrao: "11:30", retornoPadrao: "13:00", horaExtra: "18:00" }, d.config || {});
     return d;
@@ -1607,7 +1611,7 @@
         id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         nome, funcao, ativo: $("#fAtivo").checked, novo: true
       });
-      toast("Funcionário adicionado e salvo.");
+      toast(`${nome} adicionado — confira na aba Ponto do dia (fim da lista).`);
     }
     cancelarEdicao();
     salvar(true);
