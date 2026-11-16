@@ -175,14 +175,19 @@
   function fmtHoraExtra(min) { return min ? paraHoras(min) : ""; }
 
   /** minutos extras do dia: usa o campo extra; se vazio, calcula pela saída real */
-  function minutosExtras(r) {
+  function minutosExtras(r, cargaDia) {
     if (!r || r.marca) return 0;
     const manual = lerHoraExtra(r.extra);
     if (manual !== null) return manual;
-    const carga = cargaDiariaMin();
+    const carga = cargaDia || cargaDiariaMin();
     const min = minutosTrabalhados(r);
     if (min === null) return 0;
     return Math.max(0, min - carga);
+  }
+  /** carga do dia: sábado = 5h (07:00–12:00) */
+  function cargaDoDia(a, m, d) {
+    if (d && new Date(a, m - 1, d).getDay() === 6) return 300;
+    return cargaDiariaMin();
   }
   function fatorDe(r) {
     const f = r && r.fator ? Number(r.fator) : Number(estado.config.fator);
@@ -200,8 +205,8 @@
       const min = minutosTrabalhados(r);
       if (min === null) continue;
       presentes++;
-      const ex = minutosExtras(r);
-      const carga = cargaDiariaMin();
+      const carga = cargaDoDia(a, m, d);
+      const ex = minutosExtras(r, carga);
       const normal = Math.min(min, carga);
       normais += normal;
       extras += ex;
@@ -213,6 +218,61 @@
   }
 
   /** marcados no Ponto do dia */
+
+  /* ================= lançamento em massa: início de trabalho ================= */
+  const INICIO_TRABALHO = {
+    "rian ramos": "2026-10-28", "vladimir": "2026-10-28",
+    "ramon": "2026-11-11", "ramom": "2026-11-11",
+    "robson": "2026-11-12",
+    "kleniton": "2026-10-29", "klenitom": "2026-10-29",
+    "anderson souza": "2026-11-03",
+    "edemilson": "2026-11-09", "edimilson": "2026-11-09",
+    "diones": "2026-11-10"
+  };
+  /* feriados nacionais no período (não trabalha) */
+  const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
+
+  function chaveNome(nome) {
+    return (nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  }
+
+  function dataISO(a, m, d) {
+    return `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  /** aplica 07:00-11:30 / 13:00-16:30 (sábado 07:00-12:00) em todos os dias úteis desde o início */
+  function lancarPeriodo() {
+    const a = Number($("#ano").value), m = Number($("#mes").value);
+    const hoje = new Date();
+    let total = 0, nomes = [];
+    estado.funcionarios.forEach((f) => {
+      const ch = chaveNome(f.nome);
+      let inicio = null;
+      Object.keys(INICIO_TRABALHO).forEach((k) => {
+        if (ch.includes(k)) inicio = INICIO_TRABALHO[k];
+      });
+      if (!inicio) return;
+      nomes.push(f.nome.split(" ")[0]);
+      const d0 = new Date(inicio + "T00:00:00");
+      for (let d = 1; d <= diasNoMes(a, m); d++) {
+        const data = new Date(a, m - 1, d);
+        if (data < d0) continue;
+        if (data > hoje) continue;
+        if (data.getDay() === 0) continue;                  // domingo = folga
+        if (FERIADOS.includes(dataISO(a, m, d))) continue;  // feriado
+        const r = garantirReg(f.id, a, m, d);
+        if (r.marca === "F" || r.marca === "FE") continue;  // respeita falta/folga já lançada
+        r.e = "07:00"; r.sa = "11:30"; r.r = "13:00";
+        r.s = data.getDay() === 6 ? "12:00" : "16:30";
+        r.marca = ""; r.extra = ""; r.fator = "";
+        total++;
+      }
+    });
+    salvar(true);
+    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    toast(`Lançados ${total} dia(s) de trabalho para ${nomes.length} funcionário(s).`);
+  }
+
   function idsSelecionados() {
     if (!Array.isArray(estado.selecionados)) estado.selecionados = [];
     return new Set(estado.selecionados);
@@ -357,7 +417,8 @@
     r.e = hora || horaPadrao();        // 07:00
     r.sa = c.almocoPadrao;             // 11:30
     r.r = c.retornoPadrao;             // 13:00
-    r.s = r.s || c.saidaPadrao || "16:30";   // saída padrão
+    const sabado = new Date(a, m - 1, d).getDay() === 6;
+    r.s = r.s || (sabado ? "12:00" : (c.saidaPadrao || "16:30"));   // sábado: até 12:00
     r.marca = "";
     return r;
   }
@@ -634,6 +695,7 @@
     toast(`Hora extra até ${estado.config.horaExtra}.`);
   });
 
+  $("#btnLancarPeriodo").addEventListener("click", lancarPeriodo);
   $("#btnSaidaPadrao").addEventListener("click", () => marcarSaidaSelecionados(estado.config.saidaPadrao || "16:30"));
   $("#btnSaida16").addEventListener("click", () => { marcarSaidaSelecionados("16:00"); });
   $("#btnSaida18").addEventListener("click", () => { marcarSaidaSelecionados(estado.config.horaExtra || "18:00"); });
