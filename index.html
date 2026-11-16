@@ -165,7 +165,7 @@
         <span class="pb-rot">Ocorrência</span>
         <button id="btnMarcarFolga" class="btn ghost" type="button" title="Marca folga nos selecionados">🛋 Folga</button>
         <button id="btnMarcarFeriado" class="btn ghost" type="button" title="Marca feriado nos selecionados">📅 Feriado</button>
-        <button id="btnLancarPeriodo" class="btn ghost" type="button" title="Lançamento automático do início de cada funcionário até hoje: 07:00–11:30 / 13:00–16:30, sábado até 12:00, sem domingos e feriados">📋 Lançar do início até hoje</button>
+        <!-- botão removido -->
       </div>
       <span class="pb-info" id="pbInfo">Selecione quem veio e clique em registrar.</span>
     </div>
@@ -246,6 +246,15 @@
     <div class="campo grow">
       <label for="indFunc">Funcionário</label>
       <select id="indFunc"></select>
+    </div>
+    <div class="campo">
+      <label>Período (De / Até)</label>
+      <div class="grupo-botoes">
+        <input id="indDe" type="date" title="Primeiro dia do período">
+        <input id="indAte" type="date" title="Último dia do período">
+        <button id="btnIndPeriodo" class="btn ghost" type="button" title="Gerar a folha de cada funcionário do dia 26/10/2026 até hoje">26/10 → hoje</button>
+        <button id="btnIndMes" class="btn ghost" type="button" title="Voltar para a folha do mês inteiro">Mês inteiro</button>
+      </div>
     </div>
     <div class="campo">
       <label>Folhas a gerar</label>
