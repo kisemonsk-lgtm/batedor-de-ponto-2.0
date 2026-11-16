@@ -9,7 +9,8 @@
   const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  const SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
+  /* nomes reais com semana começando no DOMINGO (getDay 0 = domingo) */
+  const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const SEMANA_EXT = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
   const $ = (s, r = document) => r.querySelector(s);
