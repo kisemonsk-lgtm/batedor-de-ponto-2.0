@@ -87,7 +87,7 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 4;
+  const LISTA_VERSAO = 5;
   function sincronizarListaInicial(d) {
     if (!d || d.listaVersao === LISTA_VERSAO) return d;
     const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -258,13 +258,13 @@
   /* ================= lançamento em massa: início de trabalho ================= */
   /* funcionários que começaram DEPOIS (lista da foto) — os demais começam em 26/10 */
   const INICIO_TRABALHO = {
-    "ramon": "2026-11-11", "ramom": "2026-11-11", "ramão": "2026-11-11",
     "rian": "2026-10-28", "vladimir": "2026-10-28",
-    "robson": "2026-11-12",
     "kleniton": "2026-10-29", "klenitom": "2026-10-29",
-    "anderson souza": "2026-11-03",
+    "anderson": "2026-11-03", "anderson souza": "2026-11-03",
     "edemilson": "2026-11-09",
-    "diones": "2026-11-10"
+    "dione": "2026-11-10", "diones": "2026-11-10",
+    "ramon": "2026-11-11", "ramom": "2026-11-11", "ramão": "2026-11-11",
+    "robson": "2026-11-12", "jose robson": "2026-11-12", "josé robson": "2026-11-12"
   };
   const INICIO_PADRAO = "2026-10-26";
   /* feriados nacionais no período (não trabalha) */
