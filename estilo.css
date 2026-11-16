@@ -91,14 +91,14 @@ body {
 /* ---------- botões ---------- */
 .btn {
   font: inherit; font-size: 13px; padding: 8px 14px; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--texto); background: var(--texto); color: #fff; transition: .15s;
-  white-space: nowrap;
+  border: 1px solid var(--destaque); background: var(--destaque); color: #fff; transition: .15s;
+  white-space: nowrap; font-weight: 600;
 }
 .btn:hover { opacity: .88; }
-.btn.ghost { background: var(--input-bg); color: var(--texto); border-color: var(--linha-forte); }
-.btn.ghost:hover { background: var(--thead); opacity: 1; }
-.btn.danger { color: var(--erro); border-color: var(--linha-forte); }
-.btn.danger:hover { background: var(--hover-sel); }
+.btn.ghost { background: var(--input-bg); color: var(--destaque); border-color: var(--destaque); }
+.btn.ghost:hover { background: var(--destaque); color: #fff; opacity: 1; }
+.btn.danger { color: #fff; background: var(--erro); border-color: var(--erro); }
+.btn.danger:hover { opacity: .88; background: var(--erro); }
 .btn.tema { padding: 8px 11px; font-size: 15px; line-height: 1; }
 .btn.mini { padding: 4px 9px; font-size: 12px; border-radius: 6px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
