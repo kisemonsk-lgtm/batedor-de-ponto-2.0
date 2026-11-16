@@ -28,7 +28,7 @@ const FUNCIONARIOS_INICIAIS = [
   ["João Carlos Marques", "Gerente administrativo"],
   ["José Luiz de Oliveira Costa", "Pedreiro"],
   ["José Mário Reis dos Santos", "Carpinteiro"],
-  ["José Robson", "Servente de obras"],
+  ["José Robson", "Motorista de caminhão"],
   ["José Waldemar Bezerra da Silva Júnior", "Operador de máquinas"],
   ["Jurandir José dos Santos", "Carpinteiro"],
   ["Kauã Junior Rodrigues Meira", "Servente de obras"],
