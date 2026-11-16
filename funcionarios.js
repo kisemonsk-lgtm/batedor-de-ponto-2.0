@@ -38,7 +38,7 @@ const FUNCIONARIOS_INICIAIS = [
   ["Saulo Pinho dos Santos", "Servente"],
   ["Vladimir Silva dos Santos", "Servente de obras"],
   ["Wilson Vital Neto Estevão", "Carpinteiro"],
-  ["Ramon", "Servente de obras"],,
-  ["José Robson", "Servente de obras"],,
+  ["Ramon", "Servente de obras"] ,
+  ["José Robson", "Servente de obras"] ,
   ["Diones", "Servente de obras"]
 ];
