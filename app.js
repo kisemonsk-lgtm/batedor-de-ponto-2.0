@@ -297,6 +297,12 @@
     return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "";
   }
 
+  /** data de hoje em ISO (fuso local) */
+  function hojeISO() {
+    const h = hojeZero();
+    return `${h.getFullYear()}-${pad(h.getMonth() + 1)}-${pad(h.getDate())}`;
+  }
+
   /** horários digitados na tela (com o padrão quando vazio) */
   function horariosLancamento() {
     const ler = (sel, padrao) => { const v = $(sel) ? $(sel).value : ""; return /^\d{1,2}:\d{2}$/.test(v) ? v : padrao; };
@@ -796,7 +802,7 @@
     const hoje = hojeZero();
     const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if ($("#lpDe") && !$("#lpDe").value) $("#lpDe").value = iso(hoje);
-    if ($("#lpAte") && !$("#lpAte").value) $("#lpAte").value = iso(hoje);
+    if ($("#lpAte")) $("#lpAte").value = iso(hoje);   // "até" sempre começa em hoje
     if ($("#lpAte")) $("#lpAte").max = iso(hoje);
     if ($("#lpDe")) $("#lpDe").max = iso(hoje);
     if ($("#lpEntrada") && !$("#lpEntrada").value) $("#lpEntrada").value = HORARIOS_PADRAO.e;
@@ -820,6 +826,17 @@
       `Sem domingos e sem feriados. Os dias já lançados serão substituídos.`;
     if (!confirm(msg)) return;
     lancarPeriodo(de, ate, sel, null);
+    irParaMes(de);
+  }
+
+  /** mostra na tela o mês do lançamento (a folha só mostra o mês escolhido no topo) */
+  function irParaMes(iso) {
+    const [a, m] = iso.split("-").map(Number);
+    if ($("#ano")) $("#ano").value = String(a);
+    if ($("#mes")) $("#mes").value = String(m);
+    diaSelecionado = 1;
+    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    toast(`Lançado. Abrindo ${String(m).padStart(2, "0")}/${a} — a folha mostra este mês.`);
   }
 
   if ($("#btnLancarEscolhido")) $("#btnLancarEscolhido").addEventListener("click", executarLancarPeriodo);
