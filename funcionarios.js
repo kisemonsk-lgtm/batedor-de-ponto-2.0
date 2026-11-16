@@ -2,6 +2,7 @@
 const FUNCIONARIOS_INICIAIS = [
   ["Adeilson Justino Rodrigues", "Armador de ferragens"],
   ["Ademilson Mota", "Servente de obras"],
+  ["Edemilson Mota", "Servente de obras"],
   ["Alexandre da Silva Queiroz", "Mestre de obras"],
   ["Anderson Souza da Silva", "Carpinteiro"],
   ["Antônio A. de Oliveira", "Pedreiro"],
