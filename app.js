@@ -468,8 +468,9 @@
     const anos = [];
     for (let a = hoje.getFullYear() - 3; a <= hoje.getFullYear() + 2; a++) anos.push(a);
     sAno.innerHTML = anos.map((a) => `<option value="${a}">${a}</option>`).join("");
-    sMes.value = hoje.getMonth();
-    sAno.value = hoje.getFullYear();
+    const lembrado = lerMesEscolhido();
+    sMes.value = lembrado ? lembrado.m - 1 : hoje.getMonth();
+    sAno.value = lembrado ? lembrado.a : hoje.getFullYear();
     diaSelecionado = hoje.getDate();
     montarDias();
     sMes.addEventListener("change", () => { ajustarDiaAoMes(); });
@@ -485,10 +486,24 @@
     const h = new Date();
     diaSelecionado = (a === h.getFullYear() && m === h.getMonth() + 1) ? h.getDate() : 1;
     montarDias();
+    gravarMesEscolhido(a, m + 1);
     const novo = `${a}-${pad(m + 1)}-${pad(diaSelecionado)}`;
     if ($("#lpDe")) $("#lpDe").value = novo;          // o lançamento segue o mês escolhido no topo
     if ($("#lpAte")) $("#lpAte").value = novo;
     renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
+  }
+
+  /* ---- memória do mês escolhido (não volta sozinho para outro mês) ---- */
+  const CHAVE_MES = "cas-ponto-mes";
+  function lerMesEscolhido() {
+    try {
+      const d = JSON.parse(localStorage.getItem(CHAVE_MES) || "null");
+      if (d && d.a >= 2000 && d.m >= 1 && d.m <= 12) return d;
+    } catch (e) {}
+    return null;
+  }
+  function gravarMesEscolhido(a, m) {
+    try { localStorage.setItem(CHAVE_MES, JSON.stringify({ a, m })); } catch (e) {}
   }
 
   /** muda o mês/ano na tela e redesenha tudo */
@@ -868,13 +883,7 @@
       `Sem domingos e sem feriados. Os dias já lançados serão substituídos.`;
     if (!confirm(msg)) return;
     lancarPeriodo(de, ate, sel, null);
-    irParaMes(de);
-  }
-
-  /** mostra na tela o mês do lançamento (a folha só mostra o mês escolhido no topo) */
-  function irParaMes(iso) {
-    const { a, m } = irParaMesAno(iso);
-    toast(`Lançado. Abrindo ${String(m).padStart(2, "0")}/${a} — a folha mostra este mês.`);
+    // não mexe no mês escolhido na tela: o usuário fica onde ele selecionou
   }
 
   if ($("#btnLancarEscolhido")) $("#btnLancarEscolhido").addEventListener("click", executarLancarPeriodo);
