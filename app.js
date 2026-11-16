@@ -220,15 +220,17 @@
   /** marcados no Ponto do dia */
 
   /* ================= lançamento em massa: início de trabalho ================= */
+  /* funcionários que começaram DEPOIS (lista da foto) — os demais começam em 26/10 */
   const INICIO_TRABALHO = {
-    "rian ramos": "2026-10-28", "vladimir": "2026-10-28",
     "ramon": "2026-11-11", "ramom": "2026-11-11", "ramão": "2026-11-11",
+    "rian": "2026-10-28", "vladimir": "2026-10-28",
     "robson": "2026-11-12",
     "kleniton": "2026-10-29", "klenitom": "2026-10-29",
     "anderson souza": "2026-11-03",
-    "edemilson": "2026-11-09", "edimilson": "2026-11-09",
+    "edemilson": "2026-11-09",
     "diones": "2026-11-10"
   };
+  const INICIO_PADRAO = "2026-10-26";
   /* feriados nacionais no período (não trabalha) */
   const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
 
@@ -251,7 +253,7 @@
       Object.keys(INICIO_TRABALHO).forEach((k) => {
         if (ch.includes(k)) inicio = INICIO_TRABALHO[k];
       });
-      if (!inicio) return;
+      if (!inicio) inicio = INICIO_PADRAO;
       nomes.push(f.nome.split(" ")[0]);
       const d0 = new Date(inicio + "T00:00:00");
       for (let d = 1; d <= diasNoMes(a, m); d++) {
