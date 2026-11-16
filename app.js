@@ -481,6 +481,9 @@
     const h = new Date();
     diaSelecionado = (a === h.getFullYear() && m === h.getMonth() + 1) ? h.getDate() : 1;
     montarDias();
+    const novo = `${a}-${pad(m + 1)}-${pad(diaSelecionado)}`;
+    if ($("#lpDe")) $("#lpDe").value = novo;          // o lançamento segue o mês escolhido no topo
+    if ($("#lpAte")) $("#lpAte").value = novo;
     renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
   }
 
@@ -831,8 +834,13 @@
   function renderLancarPeriodo() {
     const hoje = hojeZero();
     const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    if ($("#lpDe") && !$("#lpDe").value) $("#lpDe").value = iso(hoje);
-    if ($("#lpAte")) $("#lpAte").value = iso(hoje);   // "até" sempre começa em hoje
+    const diaAtual = (() => {                     // data que já está na tela (mês/ano/dia escolhidos)
+      const a = Number($("#ano") && $("#ano").value), m = Number($("#mes") && $("#mes").value) + 1;
+      if (!a || !m) return iso(hoje);
+      return `${a}-${pad(m)}-${pad(Math.min(diaSelecionado || 1, diasNoMes(a, m)))}`;
+    })();
+    if ($("#lpDe") && !$("#lpDe").value) $("#lpDe").value = diaAtual;
+    if ($("#lpAte")) $("#lpAte").value = diaAtual;    // "até" já vem com o dia escolhido no topo
     if ($("#lpAte")) $("#lpAte").max = iso(hoje);
     if ($("#lpDe")) $("#lpDe").max = iso(hoje);
     if ($("#lpEntrada") && !$("#lpEntrada").value) $("#lpEntrada").value = HORARIOS_PADRAO.e;
