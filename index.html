@@ -165,9 +165,26 @@
         <span class="pb-rot">Ocorrência</span>
         <button id="btnMarcarFolga" class="btn ghost" type="button" title="Marca folga nos selecionados">🛋 Folga</button>
         <button id="btnMarcarFeriado" class="btn ghost" type="button" title="Marca feriado nos selecionados">📅 Feriado</button>
-        <button id="btnLancarPeriodo" class="btn ghost" type="button" title="Lançamento automático de 26/10 até hoje: 07:00–11:30 / 13:00–16:30, sábado até 12:00, sem domingos e feriados">📋 Lançar período (26/10 → hoje)</button>
+        <button id="btnLancarPeriodo" class="btn ghost" type="button" title="Lançamento automático do início de cada funcionário até hoje: 07:00–11:30 / 13:00–16:30, sábado até 12:00, sem domingos e feriados">📋 Lançar do início até hoje</button>
       </div>
       <span class="pb-info" id="pbInfo">Selecione quem veio e clique em registrar.</span>
+    </div>
+
+    <div class="pb-linha pb-lancar">
+      <div class="pb-grupo">
+        <span class="pb-rot">Lançar dias trabalhados</span>
+        <span class="pb-campo"><label for="lpDe">De</label><input id="lpDe" type="date" aria-label="Data de início do lançamento"></span>
+        <span class="pb-campo"><label for="lpAte">Até</label><input id="lpAte" type="date" aria-label="Data final do lançamento"></span>
+      </div>
+      <div class="pb-grupo">
+        <span class="pb-campo"><label for="lpEntrada">Entrada</label><input id="lpEntrada" type="time" value="07:00"></span>
+        <span class="pb-campo"><label for="lpSaidaAlmoco">Saída almoço</label><input id="lpSaidaAlmoco" type="time" value="11:30"></span>
+        <span class="pb-campo"><label for="lpRetorno">Retorno</label><input id="lpRetorno" type="time" value="13:00"></span>
+        <span class="pb-campo"><label for="lpSaida">Saída</label><input id="lpSaida" type="time" value="16:30"></span>
+        <span class="pb-campo"><label for="lpSaidaSabado">Sábado</label><input id="lpSaidaSabado" type="time" value="12:00"></span>
+      </div>
+      <button id="btnLancarEscolhido" class="btn" type="button" title="Lança os dias trabalhados no período escolhido para os funcionários selecionados (sem seleção = todos)">📋 Lançar no período</button>
+      <span class="pb-info" id="lancarInfo">Sem seleção = todos os funcionários.</span>
     </div>
   </div>
 
