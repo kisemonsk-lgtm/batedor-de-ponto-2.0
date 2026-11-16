@@ -887,7 +887,6 @@
   }
 
   if ($("#btnLancarEscolhido")) $("#btnLancarEscolhido").addEventListener("click", executarLancarPeriodo);
-  $("#btnLancarPeriodo").addEventListener("click", lancarDoInicioAteHoje);
   renderLancarPeriodo();
   $("#btnSaidaPadrao").addEventListener("click", () => marcarSaidaSelecionados(estado.config.saidaPadrao || "16:30"));
   $("#btnSaida16").addEventListener("click", () => { marcarSaidaSelecionados("16:00"); });
@@ -1313,15 +1312,73 @@
     return sel.value;
   }
 
-  /** uma folha (página A4) por funcionário */
-  /** folha individual: sempre do dia 1 ao dia 30 */
-  function folhaHTML(f, num, a, m) {
-    const total = 30;
-    const carga = cargaDiariaMin();
-    const tm = totaisMes(f.id, a, m, total);
-    let linhas = "";
+  /* ---------------- folha individual em período (De/Até) ---------------- */
+  const isoDeHoje = () => {
+    const h = hojeZero();
+    return dataISO(h.getFullYear(), h.getMonth() + 1, h.getDate());
+  };
 
-    for (let d = 1; d <= total; d++) {
+  const fmtBR = (iso) => {
+    const [a, m, d] = iso.split("-");
+    return `${d}/${m}/${a}`;
+  };
+
+  /** lista de dias que aparecem na folha: mês inteiro ou período */
+  function diasDaFolha(a, m, periodo) {
+    if (!periodo || !periodo.de || !periodo.ate) {
+      const out = [];
+      for (let d = 1; d <= diasNoMes(a, m); d++) out.push(d);
+      return out;
+    }
+    const de = dataDeISO(periodo.de), ate = dataDeISO(periodo.ate);
+    const out = [];
+    for (let data = new Date(de); data <= ate; data.setDate(data.getDate() + 1)) {
+      if (data.getFullYear() === a && data.getMonth() + 1 === m) out.push(data.getDate());
+    }
+    return out;
+  }
+
+  /** totais de um funcionário entre duas datas ISO (inclusive) */
+  function totaisPeriodo(fid, deISO, ateISO) {
+    const de = dataDeISO(deISO), ate = dataDeISO(ateISO);
+    let normais = 0, extras = 0, extras50 = 0, extras100 = 0, presentes = 0;
+    for (let data = new Date(de); data <= ate; data.setDate(data.getDate() + 1)) {
+      const a = data.getFullYear(), m = data.getMonth() + 1, d = data.getDate();
+      const r = reg(fid, a, m, d);
+      if (!r) continue;
+      const sit = situacao(r);
+      if (["F", "AT", "FE", "FO", "FZ", "vazio"].includes(sit)) continue;
+      const min = minutosTrabalhados(r);
+      if (min === null) continue;
+      presentes++;
+      const carga = cargaDoDia(a, m, d);
+      const ex = minutosExtras(r, carga);
+      normais += Math.min(min, carga);
+      extras += ex;
+      if (fatorDe(r) === 100) extras100 += ex; else extras50 += ex;
+    }
+    const valorHora = Number(estado.config.valorHora) || 0;
+    const valor = (extras50 / 60) * valorHora * 1.5 + (extras100 / 60) * valorHora * 2;
+    return { normais, extras, extras50, extras100, valor, presentes };
+  }
+
+  /** uma folha (página A4) por funcionário */
+  /** folha individual: mês inteiro (dia 1 ao último dia) ou período De/Até */
+  function folhaHTML(f, num, a, m, periodo) {
+    const modoPeriodo = !!(periodo && periodo.de && periodo.ate);
+    const carga = cargaDiariaMin();
+    let tm, linhas = "", tituloDoc;
+
+    if (modoPeriodo) {
+      tm = totaisPeriodo(f.id, periodo.de, periodo.ate);
+      tituloDoc = `FOLHA DE PONTO INDIVIDUAL — ${fmtBR(periodo.de)} A ${fmtBR(periodo.ate)}`;
+    } else {
+      const total = diasNoMes(a, m);
+      tm = totaisMes(f.id, a, m, total);
+      tituloDoc = `FOLHA DE PONTO INDIVIDUAL — DIA 1 AO ${total}`;
+    }
+
+    for (const d of diasDaFolha(a, m, periodo)) {
       const r = reg(f.id, a, m, d);
       const sit = situacao(r);
       const wd = nomeDia(a, m, d);
@@ -1355,10 +1412,12 @@
         <img src="logo-cas.png" alt="CAS">
         <div class="fi-empresa">
           <strong>CAS CONSTRUTORA DE ARMAZÉNS E SILOS</strong>
-          <span class="fi-doc">FOLHA DE PONTO INDIVIDUAL — DIA 1 AO 30</span>
+          <span class="fi-doc">${tituloDoc}</span>
         </div>
         <div class="fi-mes">
-          <div class="fi-mes-txt">${MESES_EXT[m].toUpperCase()} / ${a}</div>
+          <div class="fi-mes-txt">${modoPeriodo
+            ? `${fmtBR(periodo.de)} – ${fmtBR(periodo.ate)}`
+            : `${MESES_EXT[m].toUpperCase()} / ${a}`}</div>
           <div class="fi-num">Nº ${String(num).padStart(2, "0")}</div>
         </div>
       </header>
@@ -1379,7 +1438,7 @@
         <tbody>${linhas}</tbody>
         <tfoot>
           <tr>
-            <td colspan="6" class="fi-tot-rot">TOTAIS DO MÊS</td>
+            <td colspan="6" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO" : "TOTAIS DO MÊS"}</td>
             <td class="d-tot">${paraHoras(tm.normais + tm.extras)}</td>
             <td class="d-ex">${tm.extras ? "+" + paraHoras(tm.extras) : "0:00"}</td>
             <td class="d-oc">${tm.presentes} dia(s) trabalhado(s)</td>
@@ -1422,6 +1481,27 @@
       </label>`).join("");
   }
 
+  /** período escolhido na aba Folha individual (null = mês inteiro) */
+  let periodoIndividual = null;
+
+  function periodoFolha(a, m) {
+    if (!periodoIndividual) return null;
+    const p = periodoIndividual;
+    const de = dataDeISO(p.de), ate = dataDeISO(p.ate);
+    const iniMes = new Date(a, m - 1, 1), fimMes = new Date(a, m, 0);
+    if (ate < iniMes || de > fimMes) return null;
+    return p;
+  }
+
+  /** preenche/limpa os campos De/Até da aba */
+  function renderPeriodoIndividual() {
+    const de = $("#indDe"), ate = $("#indAte");
+    if (!de || !ate) return;
+    de.value = periodoIndividual ? periodoIndividual.de : "";
+    ate.value = periodoIndividual ? periodoIndividual.ate : "";
+    if ($("#btnIndMes")) $("#btnIndMes").classList.toggle("ativo", !periodoIndividual);
+  }
+
   function renderIndividual() {
     const a = Number($("#ano").value), m = Number($("#mes").value);
     preencherSelectFunc();
@@ -1441,11 +1521,36 @@
     }
     renderListaSelecao();
 
+    const per = periodoFolha(a, m);
     cont.innerHTML = alvo.map((f) =>
-      folhaHTML(f, estado.funcionarios.findIndex((x) => x.id === f.id) + 1, a, m)).join("")
+      folhaHTML(f, estado.funcionarios.findIndex((x) => x.id === f.id) + 1, a, m, per)).join("")
       || `<p style="padding:24px;text-align:center;color:var(--suave)">Nenhum funcionário cadastrado.</p>`;
   }
 
+  $("#btnIndPeriodo").addEventListener("click", () => {
+    const ate = $("#indAte").value || isoDeHoje();
+    const de = $("#indDe").value || INICIO_PADRAO;
+    if (de > ate) { toast("A data inicial não pode ser maior que a final."); return; }
+    periodoIndividual = { de, ate };
+    irParaMesAno(ate);
+    renderPeriodoIndividual();
+    renderIndividual();
+    toast(`Folha de ${fmtBR(de)} a ${fmtBR(ate)}.`);
+  });
+  $("#btnIndMes").addEventListener("click", () => {
+    periodoIndividual = null;
+    renderPeriodoIndividual();
+    renderIndividual();
+  });
+  $("#indDe").addEventListener("change", () => {
+    if (!$("#indDe").value || !$("#indAte").value) return;
+    $("#btnIndPeriodo").click();
+  });
+  $("#indAte").addEventListener("change", () => {
+    if (!$("#indDe").value || !$("#indAte").value) return;
+    $("#btnIndPeriodo").click();
+  });
+  renderPeriodoIndividual();
   $("#btnIndSel").addEventListener("click", () => { gerarTodos = false; renderIndividual(); });
   $("#btnIndTodos").addEventListener("click", () => { gerarTodos = true; renderIndividual(); });
 
