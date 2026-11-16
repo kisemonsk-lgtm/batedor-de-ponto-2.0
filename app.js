@@ -484,6 +484,15 @@
     renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
   }
 
+  /** muda o mês/ano na tela e redesenha tudo */
+  function irParaMesAno(iso) {
+    const [a, m] = String(iso).split("-").map(Number);
+    if ($("#ano")) $("#ano").value = String(a);
+    if ($("#mes")) $("#mes").value = String(m - 1);
+    ajustarDiaAoMes();
+    return { a, m };
+  }
+
   function montarDias() {
     const a = Number($("#ano").value), m = Number($("#mes").value);
     const total = diasNoMes(a, m);
@@ -847,13 +856,7 @@
 
   /** mostra na tela o mês do lançamento (a folha só mostra o mês escolhido no topo) */
   function irParaMes(iso) {
-    const [a, m] = iso.split("-").map(Number);
-    if ($("#ano")) $("#ano").value = String(a);
-    if ($("#mes")) $("#mes").value = String(m);
-    const h = new Date();
-    diaSelecionado = (a === h.getFullYear() && m === h.getMonth() + 1) ? h.getDate() : 1;
-    montarDias();
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    const { a, m } = irParaMesAno(iso);
     toast(`Lançado. Abrindo ${String(m).padStart(2, "0")}/${a} — a folha mostra este mês.`);
   }
 
