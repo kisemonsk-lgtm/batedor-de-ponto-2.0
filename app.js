@@ -489,7 +489,12 @@
     const [a, m] = String(iso).split("-").map(Number);
     if ($("#ano")) $("#ano").value = String(a);
     if ($("#mes")) $("#mes").value = String(m - 1);
+    // quando o mês vem de uma data, o dia é o da data (não "hoje" nem 1)
+    const dia = Number(String(iso).split("-")[2]) || 1;
     ajustarDiaAoMes();
+    diaSelecionado = Math.min(dia, diasNoMes(a, m));
+    montarDias();
+    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
     return { a, m };
   }
 
