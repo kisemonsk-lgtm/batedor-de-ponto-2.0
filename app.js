@@ -10,10 +10,12 @@
                  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const SEMANA_EXT = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const hoje = new Date();
+  const HOJE_ISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
 
   /* ---------------- estado ---------------- */
   let estado = carregar();
@@ -458,6 +460,7 @@
     sAno.innerHTML = anos.map((a) => `<option value="${a}">${a}</option>`).join("");
     sMes.value = hoje.getMonth();
     sAno.value = hoje.getFullYear();
+    diaSelecionado = hoje.getDate();
     montarDias();
     sMes.addEventListener("change", () => { ajustarDiaAoMes(); });
     sAno.addEventListener("change", () => { ajustarDiaAoMes(); });
@@ -468,6 +471,9 @@
   }
 
   function ajustarDiaAoMes() {
+    const a = Number($("#ano").value), m = Number($("#mes").value);
+    const h = new Date();
+    diaSelecionado = (a === h.getFullYear() && m === h.getMonth() + 1) ? h.getDate() : 1;
     montarDias();
     renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
   }
@@ -475,7 +481,11 @@
   function montarDias() {
     const a = Number($("#ano").value), m = Number($("#mes").value);
     const total = diasNoMes(a, m);
+    const h = new Date();
+    const ehMesAtual = a === h.getFullYear() && m === h.getMonth() + 1;
+    if (ehMesAtual) diaSelecionado = h.getDate();          // mês de hoje: abre no dia de hoje
     if (diaSelecionado > total) diaSelecionado = total;
+    if (diaSelecionado < 1) diaSelecionado = 1;
     $("#dia").innerHTML = Array.from({ length: total }, (_, i) => {
       const d = i + 1;
       const wd = SEMANA[nomeDia(a, m, d)];
@@ -486,7 +496,7 @@
 
   function renderTitulos() {
     const a = Number($("#ano").value), m = Number($("#mes").value);
-    $("#tituloDia").textContent = `Ponto do dia — ${pad(diaSelecionado)}/${pad(m + 1)}/${a} (${MESES[m]})`;
+    $("#tituloDia").textContent = `Ponto do dia — ${pad(diaSelecionado)}/${pad(m + 1)}/${a} (${SEMANA_EXT[nomeDia(a, m, diaSelecionado)]}, ${MESES[m]})`;
     const total = diasNoMes(a, m);
     $("#tituloMes").textContent = `Folha do mês — ${MESES[m]} / ${a}`;
     $("#diasInfo").textContent = `Dias 1 a ${total} • ${MESES[m]}/${a}`;
@@ -834,7 +844,9 @@
     const [a, m] = iso.split("-").map(Number);
     if ($("#ano")) $("#ano").value = String(a);
     if ($("#mes")) $("#mes").value = String(m);
-    diaSelecionado = 1;
+    const h = new Date();
+    diaSelecionado = (a === h.getFullYear() && m === h.getMonth() + 1) ? h.getDate() : 1;
+    montarDias();
     renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
     toast(`Lançado. Abrindo ${String(m).padStart(2, "0")}/${a} — a folha mostra este mês.`);
   }
