@@ -87,7 +87,7 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 3;
+  const LISTA_VERSAO = 4;
   function sincronizarListaInicial(d) {
     if (!d || d.listaVersao === LISTA_VERSAO) return d;
     const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
