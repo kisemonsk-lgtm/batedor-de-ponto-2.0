@@ -233,11 +233,14 @@
   }
 
   /** minutos trabalhados; null quando não há dados suficientes */
-  function minutosTrabalhados(r) {
+  function minutosTrabalhados(r, cargaDia) {
     if (!r) return null;
     const e = minutos(r.e), sa = minutos(r.sa), ret = minutos(r.r), s = minutos(r.s);
     if (e === null || s === null) return null;
     let total = s - e;
+    const carga = cargaDia || cargaDiariaMin();
+    // dia de expediente curto (sábado): conta só a manhã, sem descontar almoço
+    if (carga < cargaDiariaMin()) return Math.max(0, Math.min(total, carga));
     if (ret !== null && sa !== null && ret > sa && s > sa) total -= (ret - sa);
     else if (sa !== null && ret === null && s > sa) total -= 60; // saiu para almoço e não voltou: desconta 1h
     return total;
@@ -273,7 +276,7 @@
     const manual = lerHoraExtra(r.extra);
     if (manual !== null) return manual;
     const carga = cargaDia || cargaDiariaMin();
-    const min = minutosTrabalhados(r);
+    const min = minutosTrabalhados(r, carga);
     if (min === null) return 0;
     return Math.max(0, min - carga);
   }
@@ -295,10 +298,10 @@
       if (!r) continue;
       const sit = situacao(r);
       if (["F", "AT", "FE", "FO", "FZ", "vazio"].includes(sit)) continue;
-      const min = minutosTrabalhados(r);
+      const carga = cargaDoDia(a, m, d);
+      const min = minutosTrabalhados(r, carga);
       if (min === null) continue;
       presentes++;
-      const carga = cargaDoDia(a, m, d);
       const ex = minutosExtras(r, carga);
       const normal = Math.min(min, carga);
       normais += normal;
@@ -779,9 +782,8 @@
       cel.innerHTML = `<span class="marca ${sit.toLowerCase()}">${sit}</span>`;
       return;
     }
-    const min = minutosTrabalhados(r);
-    if (min === null) { cel.textContent = ""; cel.className = "c-h horas"; return; }
-    const carga = cargaDiariaMin();
+    const carga = cargaDoDia(a, m, d);
+    const min = minutosTrabalhados(r, carga);
     const ex = minutosExtras(r);
     cel.innerHTML = paraHoras(min) + (ex > 0 ? `<div class="extra-mini">+${paraHoras(ex)}</div>` : "");
     cel.className = "c-h horas " + (min >= carga || ex > 0 ? "extra" : "falta");
@@ -1022,7 +1024,7 @@
         let texto = "";
 
         if (sit === "ok" || (r && r.e && !r.marca)) {
-          const min = minutosTrabalhados(r);
+          const min = minutosTrabalhados(r, cargaDoDia(a, m, dd));
           const ex = minutosExtras(r, cargaDoDia(a, m, dd));
           if (min !== null) { totalMin += min; extrasMin += ex; texto = paraHoras(min).replace(":00", "h") + (ex > 0 ? `<sup class="ex-sup">+${paraHoras(ex)}</sup>` : ""); }
           else texto = r.e;
@@ -1074,7 +1076,7 @@
     estado.funcionarios.forEach((f) => {
       const r = reg(f.id, a, m, d);
       const sit = situacao(r);
-      if (sit === "ok") { presentes++; const min = minutosTrabalhados(r); if (min) totalMin += min; }
+      if (sit === "ok") { presentes++; const min = minutosTrabalhados(r, cargaDoDia(a, m, d)); if (min) totalMin += min; }
       if (sit === "F") problemas++;
       if (sit === "FO" || sit === "FZ") folgas++;
     });
@@ -1244,7 +1246,7 @@
   /* ---------------- ABA: HORAS EXTRAS ---------------- */
   function renderExtra() {
     const a = Number($("#ano").value), m = Number($("#mes").value), d = diaSelecionado;
-    const carga = cargaDiariaMin();
+    const carga = cargaDoDia(a, m, d);
     const busca = ($("#exBusca").value || "").trim().toLowerCase();
     const lista = estado.funcionarios.filter((f) =>
       !busca || (f.nome + " " + f.funcao).toLowerCase().includes(busca));
@@ -1261,8 +1263,8 @@
     tbody.innerHTML = lista.map((f) => {
       const num = estado.funcionarios.findIndex((x) => x.id === f.id) + 1;
       const r = reg(f.id, a, m, d) || {};
-      const min = minutosTrabalhados(r);
-      const ex = minutosExtras(r);
+      const min = minutosTrabalhados(r, carga);
+      const ex = minutosExtras(r, carga);
       const fat = fatorDe(r);
       somaExtra += ex;
       if (fat === 100) soma100 += ex; else soma50 += ex;
@@ -1404,12 +1406,14 @@
       if (!r) continue;
       const sit = situacao(r);
       if (["F", "AT", "FE", "FO", "FZ", "vazio"].includes(sit)) continue;
-      const min = minutosTrabalhados(r);
+      const carga = cargaDoDia(a, m, d);
+      const min = minutosTrabalhados(r, carga);
       if (min === null) continue;
       presentes++;
-      const carga = cargaDoDia(a, m, d);
       const ex = minutosExtras(r, carga);
-      normais += Math.min(min, carga);
+      // sábado: vale só o que foi trabalhado (sem "buracos" da tarde), então não sobra extra
+      const usado = Math.min(min, carga);
+      normais += usado;
       extras += ex;
       if (fatorDe(r) === 100) extras100 += ex; else extras50 += ex;
     }
@@ -1454,7 +1458,7 @@
         <td>${r ? escapar(r.sa || "") : ""}</td>
         <td>${r ? escapar(r.r || "") : ""}</td>
         <td>${r ? escapar(r.s || "") : ""}</td>
-        <td class="d-tot">${r && r.e && r.s ? paraHoras(minutosTrabalhados(r) || 0) : ""}</td>
+        <td class="d-tot">${r && r.e && r.s ? paraHoras(minutosTrabalhados(r, cargaDoDia(a, m, d)) || 0) : ""}</td>
         <td class="d-ex">${ex ? "+" + paraHoras(ex) : ""}</td>
         <td class="d-oc">${["F", "AT", "FE", "FO", "FZ"].includes(sit) ? sit + (r && r.obs ? " — " + escapar(r.obs) : "") : (r && r.obs ? escapar(r.obs) : "")}</td>
       </tr>`;
