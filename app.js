@@ -98,7 +98,7 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 7;
+  const LISTA_VERSAO = 8;
   /** importa os lançamentos de 26 a 31/10/2026 (arquivo oficial), casando pelo nome */
   function importarRegistrosOficiais(d) {
     if (typeof REGISTROS_IMPORTADOS === "undefined") return d;
