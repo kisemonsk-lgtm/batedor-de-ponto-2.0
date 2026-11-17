@@ -87,30 +87,55 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 5;
+  const LISTA_VERSAO = 6;
   function sincronizarListaInicial(d) {
     if (!d || d.listaVersao === LISTA_VERSAO) return d;
     const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-    const atuais = d.funcionarios.map((f) => chave(f.nome));
-    const usados = new Set(d.funcionarios.map((f) => f.id));
-    let proximo = d.funcionarios.length + 1;
-    let adicionados = 0;
-    FUNCIONARIOS_INICIAIS.forEach(([nome, funcao]) => {
-      const pos = atuais.indexOf(chave(nome));
-      if (pos !== -1) {                       // já existe: acerta a função pela lista oficial
-        const f = d.funcionarios[pos];
-        if (funcao && f.funcao !== funcao) f.funcao = funcao;
-        return;
+    const oficiais = FUNCIONARIOS_INICIAIS.map(([nome, funcao]) => ({ nome, funcao, ch: chave(nome) }));
+    const porChave = new Map(oficiais.map((o) => [o.ch, o]));
+    const antigos = d.funcionarios.slice();
+    const usados = new Set(antigos.map((f) => f.id));
+    const novo = [];
+
+    // 1) mantém a mesma pessoa (mesmo id, casando pelo nome normalizado)
+    oficiais.forEach((o) => {
+      const achado = antigos.find((f) => chave(f.nome) === o.ch && !novo.some((x) => x.id === f.id));
+      if (achado) {
+        achado.nome = o.nome;                 // nome oficial
+        if (o.funcao) achado.funcao = o.funcao;
+        achado.ativo = achado.ativo !== false;
+        novo.push(achado);
       }
+    });
+
+    // 2) completa com quem está na lista oficial e ainda não entrou
+    let proximo = 1;
+    oficiais.forEach((o) => {
+      if (novo.some((f) => chave(f.nome) === o.ch)) return;
       while (usados.has("f" + proximo)) proximo++;
       const id = "f" + proximo;
       usados.add(id);
-      d.funcionarios.push({ id, nome, funcao, ativo: true });
-      atuais.push(chave(nome));
-      adicionados++;
+      novo.push({ id, nome: o.nome, funcao: o.funcao, ativo: true });
     });
+
+    // 3) reordena pela lista oficial (a ordem das folhas segue a lista)
+    const ordemOficial = new Map(oficiais.map((o, i) => [o.ch, i]));
+    novo.sort((x, y) => {
+      const ix = ordemOficial.has(chave(x.nome)) ? ordemOficial.get(chave(x.nome)) : 9999;
+      const iy = ordemOficial.has(chave(y.nome)) ? ordemOficial.get(chave(y.nome)) : 9999;
+      return ix - iy;
+    });
+
+    // 4) quem não está na lista oficial fica no fim, como inativo (nada é apagado)
+    antigos.forEach((f) => {
+      if (novo.some((x) => x.id === f.id)) return;
+      if (porChave.has(chave(f.nome))) return;
+      f.ativo = false;
+      novo.push(f);
+    });
+
+    d.funcionarios = novo;
     d.listaVersao = LISTA_VERSAO;
-    if (adicionados) console.info(adicionados + " funcionário(s) novo(s) da lista inicial");
     return d;
   }
 
