@@ -1,6 +1,5 @@
-/* Lista de funcionários — importada de ponto-CAS-2026-10.json (44 pessoas) */
+/* Lista de funcionários — importada de ponto-CAS-2026-10.json (43 pessoas) */
 const FUNCIONARIOS_INICIAIS = [
-  ["Rosildo Aparecido dos Santos", "Mestre de obras"],
   ["Adeilson Justino Rodrigues", "MOTORISTA"],
   ["Edemilson Mota", "Servente de obras"],
   ["Alexandre da Silva Queiroz", "Mestre de obras"],
