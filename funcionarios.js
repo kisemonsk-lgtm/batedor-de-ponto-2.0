@@ -1,11 +1,9 @@
-/* Lista inicial de funcionários — pode ser alterada dentro do próprio sistema */
+/* Lista de funcionários — importada de ponto-CAS-2026-10.json (43 pessoas) */
 const FUNCIONARIOS_INICIAIS = [
-  ["Adeilson Justino Rodrigues", "Armador de ferragens"],
-  ["Ademilson Mota", "Servente de obras"],
+  ["Adeilson Justino Rodrigues", "MOTORISTA"],
   ["Edemilson Mota", "Servente de obras"],
   ["Alexandre da Silva Queiroz", "Mestre de obras"],
   ["Anderson Souza da Silva", "Carpinteiro"],
-  ["Antônio A. de Oliveira", "Pedreiro"],
   ["Antônio Carlos Gomes", "Armador de ferragens"],
   ["Antônio Francisco dos Santos Barbosa", "Carpinteiro"],
   ["Arine V. de Jesus", "TST adm"],
@@ -14,8 +12,6 @@ const FUNCIONARIOS_INICIAIS = [
   ["Diego Santos Oliveira", "Pedreiro"],
   ["Diones Sousa Silva", "Carpinteiro"],
   ["Dirson Pires", "Carpinteiro"],
-  ["Domicio dos Santos L. Junior", "Servente de obras"],
-  ["Edilson Urba", "Técnico de Segurança do Trabalho"],
   ["Edvaldo Carriel", "Carpinteiro"],
   ["Felipe Augusto Queiroz Leme", "Servente de obras"],
   ["Fernando Paiva Silva", "Montador"],
@@ -26,9 +22,8 @@ const FUNCIONARIOS_INICIAIS = [
   ["Janio de Sousa Santos", "Carpinteiro"],
   ["Jeferson Vanderlei Geiss", "Comprador"],
   ["João Carlos Marques", "Gerente administrativo"],
-  ["José Luiz de Oliveira Costa", "Pedreiro"],
   ["José Mário Reis dos Santos", "Carpinteiro"],
-  ["José Robson", "Motorista de caminhão"],
+  ["José Robson", "MOTORISTA DE CAMINHÕES"],
   ["José Waldemar Bezerra da Silva Júnior", "Operador de máquinas"],
   ["Jurandir José dos Santos", "Carpinteiro"],
   ["Kauã Junior Rodrigues Meira", "Servente de obras"],
@@ -42,9 +37,10 @@ const FUNCIONARIOS_INICIAIS = [
   ["Reinaldo Muniz", "Servente de obras"],
   ["Rian Ramos Conceição", "Servente de obras"],
   ["Rodrigo Silva de Sousa", "Almoxarife"],
-  ["Rosildo Aparecido dos Santos", "Mestre de obras"],
   ["Rubenite Costa França", "Armador de ferragens"],
-  ["Saulo Pinho dos Santos", "Servente"],
   ["Vladimir Silva dos Santos", "Servente de obras"],
-  ["Wilson Vital Neto Estevão", "Carpinteiro"]
+  ["Wilson Vital Neto Estevão", "Carpinteiro"],
+  ["JENIO SOUSA SANTOS", "ENCARREGADO"],
+  ["JOÃO GOMES", "TST"],
+  ["LUCAS PEREIRA DE SOSUSA", "ENGENHEIRO"]
 ];
