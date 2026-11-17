@@ -277,7 +277,7 @@
     if (min === null) return 0;
     return Math.max(0, min - carga);
   }
-  /** carga do dia: sábado = 5h (07:00–12:00) */
+  /** carga do dia: sábado = 4h30 (07:00–11:30) */
   function cargaDoDia(a, m, d) {
     if (d && new Date(a, m - 1, d).getDay() === 6) return 270; // sábado: 07:00–11:30 = 4h30
     return cargaDiariaMin();
@@ -1023,7 +1023,7 @@
 
         if (sit === "ok" || (r && r.e && !r.marca)) {
           const min = minutosTrabalhados(r);
-          const ex = minutosExtras(r);
+          const ex = minutosExtras(r, cargaDoDia(a, m, dd));
           if (min !== null) { totalMin += min; extrasMin += ex; texto = paraHoras(min).replace(":00", "h") + (ex > 0 ? `<sup class="ex-sup">+${paraHoras(ex)}</sup>` : ""); }
           else texto = r.e;
           cls.push("ok");
@@ -1446,7 +1446,7 @@
       if (sit === "FO") cls.push("fo");
       if (sit === "FZ") cls.push("fz");
 
-      const ex = r ? minutosExtras(r) : 0;
+      const ex = r ? minutosExtras(r, cargaDoDia(a, m, d)) : 0;
       linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}">
         <td class="d-num">${pad(d)}</td>
         <td class="d-sem">${SEMANA[wd]}</td>
