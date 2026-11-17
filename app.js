@@ -328,7 +328,7 @@
   const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
 
   /* horários usados no lançamento em massa (podem ser trocados na tela) */
-  const HORARIOS_PADRAO = { e: "07:00", sa: "", r: "", s: "11:30", sabado: "11:30" };
+  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30", sabado: "11:30" };
 
   function chaveNome(nome) {
     return (nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
