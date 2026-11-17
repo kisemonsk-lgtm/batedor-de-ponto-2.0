@@ -1252,6 +1252,81 @@
     }
   }
 
+  /** PDF/impressão de TODOS os cartões de ponto num arquivo só (pode atravessar meses) */
+  async function gerarPDFTodos() {
+    if (!window.html2canvas || !window.jspdf) {
+      toast("Biblioteca de PDF não carregou — usando a impressão do navegador.");
+      window.print();
+      return;
+    }
+    const de = ($("#indDe") && $("#indDe").value) || INICIO_PADRAO;
+    const ate = ($("#indAte") && $("#indAte").value) || isoDeHoje();
+    if (de > ate) { toast("A data inicial não pode ser maior que a final."); return; }
+
+    const sel = idsSelecionados();
+    const alvo = sel.size ? estado.funcionarios.filter((f) => sel.has(f.id)) : estado.funcionarios.slice();
+    if (!alvo.length) { toast("Nenhum funcionário para gerar."); return; }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const larguraPagina = 210, alturaPagina = 297, margem = 8;
+    const larg = larguraPagina - margem * 2;
+    const alturaUtil = alturaPagina - margem * 2;
+
+    // todos os meses que o período atravessa
+    const meses = [];
+    let cursor = new Date(dataDeISO(de).getFullYear(), dataDeISO(de).getMonth(), 1);
+    const fim = dataDeISO(ate);
+    while (cursor <= fim) {
+      meses.push({ a: cursor.getFullYear(), m: cursor.getMonth() + 1 });
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+
+    toast(`Gerando PDF de ${alvo.length} folha(s)…`);
+    let primeira = true;
+
+    try {
+      for (const f of alvo) {
+        const num = estado.funcionarios.findIndex((x) => x.id === f.id) + 1;
+        for (const { a, m } of meses) {
+          const html = folhaHTML(f, num, a, m, { de, ate });
+          const caixa = montarFolhaOculta(html);
+          await Promise.all(Array.from(caixa.querySelectorAll("img")).map((img) =>
+            img.complete ? Promise.resolve() : new Promise((ok) => { img.onload = img.onerror = ok; })));
+          const tela = await window.html2canvas(caixa, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+          caixa.remove();
+
+          const alt = (tela.height * larg) / tela.width;
+          if (!primeira) pdf.addPage();
+          primeira = false;
+
+          if (alt <= alturaUtil) {
+            pdf.addImage(tela.toDataURL("image/jpeg", 0.9), "JPEG", margem, margem, larg, alt);
+          } else {
+            let restante = tela.height, y = 0, pag = 0;
+            while (restante > 0) {
+              const alturaRecorte = Math.min(restante, (alturaUtil * tela.width) / larg);
+              const canvas = document.createElement("canvas");
+              canvas.width = tela.width;
+              canvas.height = alturaRecorte;
+              canvas.getContext("2d").drawImage(tela, 0, y, tela.width, alturaRecorte, 0, 0, tela.width, alturaRecorte);
+              if (pag > 0) pdf.addPage();
+              pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", margem, margem,
+                larg, (alturaRecorte * larg) / tela.width);
+              restante -= alturaRecorte; y += alturaRecorte; pag++;
+            }
+          }
+        }
+      }
+      const nome = `folhas-ponto-${de}-a-${ate}.pdf`;
+      pdf.save(nome);
+      toast(`PDF com ${alvo.length} folha(s) salvo.`);
+    } catch (e) {
+      console.error(e);
+      toast("Não foi possível gerar o PDF — use Imprimir e escolha “Salvar como PDF”.");
+    }
+  }
+
   /** PDF das abas de tabela (dia, mês, extras): usa a impressão do navegador */
   function imprimirOuPDF(aba) {
     const alvo = ["mes", "extra"].includes(aba) ? aba : "dia";
@@ -1270,6 +1345,8 @@
   });
 
   $("#btnIndPDF").addEventListener("click", gerarPDFFolha);
+  if ($("#btnIndTodosPDF")) $("#btnIndTodosPDF").addEventListener("click", gerarPDFTodos);
+  window.gerarPDFTodos = gerarPDFTodos;
 
   /* ---------------- ABA: HORAS EXTRAS ---------------- */
   function renderExtra() {
@@ -1578,7 +1655,8 @@
     const de = dataDeISO(p.de), ate = dataDeISO(p.ate);
     const iniMes = new Date(a, m - 1, 1), fimMes = new Date(a, m, 0);
     if (ate < iniMes || de > fimMes) return null;
-    return p;
+    // o período inteiro (pode atravessar meses) — a folha mostra os dias do mês e o total do período
+    return { de: p.de, ate: p.ate };
   }
 
   /** preenche/limpa os campos De/Até da aba */
