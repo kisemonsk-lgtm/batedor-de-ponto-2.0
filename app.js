@@ -1041,7 +1041,15 @@
         celulas += `<td class="${cls.join(" ")}" data-dia="${d}" title="${pad(d)}/${pad(m + 1)} — clique para lançar">${texto}</td>`;
       }
 
-      const saldo = totalMin - diasUteis * carga;
+      // carga real do mês: dia útil 8h, sábado 4h30, domingos e feriados fora
+      let cargaMes = 0;
+      for (let dd = 1; dd <= total; dd++) {
+        const wd2 = nomeDia(a, m, dd);
+        if (wd2 === 0) continue;
+        if (FERIADOS.includes(dataISO(a, m, dd))) continue;
+        cargaMes += cargaDoDia(a, m, dd);
+      }
+      const saldo = totalMin - cargaMes;
       linhas += `<tr data-id="${f.id}">
         <td class="c-num">${num}</td>
         <td class="nome">${escapar(f.nome)}</td>
