@@ -181,8 +181,8 @@
     const e = minutos(r.e), sa = minutos(r.sa), ret = minutos(r.r), s = minutos(r.s);
     if (e === null || s === null) return null;
     let total = s - e;
-    if (sa !== null && ret !== null && ret > sa) total -= (ret - sa);
-    else if (sa !== null && ret === null) total -= 60; // saiu para almoço e não voltou: desconta 1h
+    if (ret !== null && sa !== null && ret > sa && s > sa) total -= (ret - sa);
+    else if (sa !== null && ret === null && s > sa) total -= 60; // saiu para almoço e não voltou: desconta 1h
     return total;
   }
 
@@ -222,7 +222,7 @@
   }
   /** carga do dia: sábado = 5h (07:00–12:00) */
   function cargaDoDia(a, m, d) {
-    if (d && new Date(a, m - 1, d).getDay() === 6) return 300;
+    if (d && new Date(a, m - 1, d).getDay() === 6) return 270; // sábado: 07:00–11:30 = 4h30
     return cargaDiariaMin();
   }
   function fatorDe(r) {
@@ -271,7 +271,7 @@
   const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
 
   /* horários usados no lançamento em massa (podem ser trocados na tela) */
-  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30", sabado: "12:00" };
+  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30", sabado: "11:30" };
 
   function chaveNome(nome) {
     return (nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -572,7 +572,7 @@
     r.sa = c.almocoPadrao;             // 11:30
     r.r = c.retornoPadrao;             // 13:00
     const sabado = new Date(a, m - 1, d).getDay() === 6;
-    r.s = r.s || (sabado ? "12:00" : (c.saidaPadrao || "16:30"));   // sábado: até 12:00
+    r.s = r.s || (sabado ? "11:30" : (c.saidaPadrao || "16:30"));   // sábado: até 11:30
     r.marca = "";
     return r;
   }
