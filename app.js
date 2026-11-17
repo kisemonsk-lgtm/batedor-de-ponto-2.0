@@ -44,13 +44,17 @@
         return normalizar({ funcionarios: reserva, registros: {}, config: {} });
       }
     } catch (e) { console.warn("Falha ao ler dados salvos", e); }
-    return normalizar({
+    const novo = normalizar({
       funcionarios: FUNCIONARIOS_INICIAIS.map(([nome, funcao], i) => ({
         id: "f" + (i + 1), nome, funcao, ativo: true
       })),
       registros: {},
       config: { horaEntrada: "07:00", horaSaida: "16:30", cargaDiaria: 8, tolerancia: 5, valorHora: 0, diasUteis: 22, fator: 50, horaPadrao: "07:00", saidaPadrao: "16:30", almocoPadrao: "11:30", retornoPadrao: "13:00", horaExtra: "18:00" }
     });
+    // primeira abertura (ou dados perdidos): traz os lançamentos oficiais já conhecidos
+    importarRegistrosOficiais(novo);
+    novo.registrosImportados = 1;
+    return novo;
   }
 
   function lerBackupFuncionarios() {
@@ -220,6 +224,11 @@
   }
 
   /* ---------------- cálculos ---------------- */
+  /** registro sem nenhum dado lançado */
+  function rVazio(r) {
+    return !r || (!r.e && !r.sa && !r.r && !r.s && !r.obs && !r.marca && !r.extra && !r.fator);
+  }
+
   function reg(fid, a, m, d) {
     const k = chaveData(a, m, d);
     return (estado.registros[k] && estado.registros[k][fid]) || null;
@@ -831,7 +840,7 @@
     if (campo === "marca" && ev.target.value === "AT" && !r.obs) r.obs = "atestado";
     if (campo === "marca" && ev.target.value === "F" && !r.obs) r.obs = "falta";
     if (["e", "sa", "r", "s"].includes(campo) && ev.target.value) r.marca = "";
-    if (!r.e && !r.sa && !r.r && !r.s && !r.obs && !r.marca && !r.extra && !r.fator) {
+    if (rVazio(r) && estado.registros[chaveData(a, m, d)]) {
       delete estado.registros[chaveData(a, m, d)][id];
     }
     salvar();
@@ -979,7 +988,7 @@
   $("#btnLimparDia").addEventListener("click", () => {
     const a = Number($("#ano").value), m = Number($("#mes").value), d = diaSelecionado;
     if (!confirm(`Apagar todos os registros de ${pad(d)}/${pad(m + 1)}/${a}?`)) return;
-    delete estado.registros[chaveData(a, m, d)];
+    if (estado.registros[chaveData(a, m, d)]) delete estado.registros[chaveData(a, m, d)];
     salvar(true); renderDia(); renderResumo(); renderMes();
     toast("Registros do dia apagados.");
   });
@@ -1419,7 +1428,7 @@
     } else {
       r[campo] = ev.target.value;
     }
-    if (!r.e && !r.sa && !r.r && !r.s && !r.obs && !r.marca && !r.extra && !r.fator) {
+    if (rVazio(r) && estado.registros[chaveData(a, m, d)]) {
       delete estado.registros[chaveData(a, m, d)][id];
     }
     salvar(true);
