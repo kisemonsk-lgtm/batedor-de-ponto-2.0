@@ -28,7 +28,14 @@
       const bruto = localStorage.getItem(CHAVE);
       if (bruto) {
         const dados = JSON.parse(bruto);
-        if (dados && Array.isArray(dados.funcionarios) && dados.funcionarios.length) return normalizar(sincronizarListaInicial(dados));
+        if (dados && Array.isArray(dados.funcionarios) && dados.funcionarios.length) {
+          const pronto = normalizar(sincronizarListaInicial(dados));
+          if (pronto.registrosImportados !== 1) {
+            importarRegistrosOficiais(pronto);
+            pronto.registrosImportados = 1;   // roda uma única vez por aparelho
+          }
+          return pronto;
+        }
       }
       // lista principal vazia ou corrompida: tenta o backup automático
       const reserva = lerBackupFuncionarios();
@@ -88,6 +95,31 @@
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
   const LISTA_VERSAO = 6;
+  /** importa os lançamentos de 26 a 31/10/2026 (arquivo oficial), casando pelo nome */
+  function importarRegistrosOficiais(d) {
+    if (typeof REGISTROS_IMPORTADOS === "undefined") return d;
+    const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+    const idPorNome = new Map(d.funcionarios.map((f) => [chave(f.nome), f.id]));
+    let n = 0;
+    Object.keys(REGISTROS_IMPORTADOS).forEach((dia) => {
+      const doDia = REGISTROS_IMPORTADOS[dia];
+      Object.keys(doDia).forEach((fid) => {
+        const f = d.funcionarios.find((x) => x.id === fid)
+          || d.funcionarios.find((x) => chave(x.nome) === chave((doDia[fid] && doDia[fid].nome) || ""));
+        const alvo = f ? f.id : null;
+        if (!alvo) return;
+        d.registros[dia] = d.registros[dia] || {};
+        if (d.registros[dia][alvo]) return;          // já lançado: não sobrescreve
+        const r = Object.assign({}, doDia[fid]);
+        delete r.nome;
+        d.registros[dia][alvo] = r;
+        n++;
+      });
+    });
+    if (n) console.info(n + " lançamento(s) importado(s) de outubro");
+    return d;
+  }
+
   function sincronizarListaInicial(d) {
     if (!d || d.listaVersao === LISTA_VERSAO) return d;
     const chave = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -296,7 +328,7 @@
   const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
 
   /* horários usados no lançamento em massa (podem ser trocados na tela) */
-  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30", sabado: "11:30" };
+  const HORARIOS_PADRAO = { e: "07:00", sa: "", r: "", s: "11:30", sabado: "11:30" };
 
   function chaveNome(nome) {
     return (nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -594,8 +626,7 @@
     const r = garantirReg(fid, a, m, d);
     const c = estado.config;
     r.e = hora || horaPadrao();        // 07:00
-    r.sa = c.almocoPadrao;             // 11:30
-    r.r = c.retornoPadrao;             // 13:00
+    if (sabado) { r.sa = ""; r.r = ""; } else { r.sa = c.almocoPadrao; r.r = c.retornoPadrao; }
     const sabado = new Date(a, m - 1, d).getDay() === 6;
     r.s = r.s || (sabado ? "11:30" : (c.saidaPadrao || "16:30"));   // sábado: até 11:30
     r.marca = "";
