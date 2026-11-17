@@ -1545,7 +1545,7 @@
 
       <div class="fi-assinaturas">
         <div class="fi-ass"><span></span>Assinatura do funcionário</div>
-        <div class="fi-ass"><span></span>Responsável / Engenheiro — assinatura e carimbo</div>
+        <div class="fi-ass"><span></span>Responsável — assinatura e carimbo</div>
       </div>
     </article>`;
   }
