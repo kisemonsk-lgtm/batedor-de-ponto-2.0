@@ -435,3 +435,18 @@ table.fi-tabela tfoot td { background: var(--thead); font-weight: 700; }
   .dia-cel { color: #000 !important; }
   th.hoje { box-shadow: none; }
 }
+
+/* aviso quando um filtro está escondendo funcionários */
+.dica-filtro {
+  margin: 10px 20px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--destaque, #c8102e);
+  background: color-mix(in srgb, var(--destaque, #c8102e) 12%, transparent);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dica-filtro.oculto { display: none; }
