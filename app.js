@@ -1527,6 +1527,17 @@
     return { normais, extras, extras50, extras100, valor, presentes };
   }
 
+  /** totais de um funcionário dentro de um mês, limitados ao período De/Até */
+  function totaisPeriodoMes(fid, deISO, ateISO, a, m) {
+    const de = dataDeISO(deISO), ate = dataDeISO(ateISO);
+    const iniMes = new Date(a, m - 1, 1), fimMes = new Date(a, m, 0);
+    const de1 = de > iniMes ? de : iniMes;
+    const ate1 = ate < fimMes ? ate : fimMes;
+    if (de1 > ate1) return { normais: 0, extras: 0, extras50: 0, extras100: 0, valor: 0, presentes: 0 };
+    return totaisPeriodo(fid, dataISO(de1.getFullYear(), de1.getMonth() + 1, de1.getDate()),
+      dataISO(ate1.getFullYear(), ate1.getMonth() + 1, ate1.getDate()));
+  }
+
   /** uma folha (página A4) por funcionário */
   /** folha individual: mês inteiro (dia 1 ao último dia) ou período De/Até */
   function folhaHTML(f, num, a, m, periodo) {
@@ -1535,7 +1546,8 @@
     let tm, linhas = "", tituloDoc;
 
     if (modoPeriodo) {
-      tm = totaisPeriodo(f.id, periodo.de, periodo.ate);
+      // numa folha por mês, os totais contam só os dias deste mês
+      tm = totaisPeriodoMes(f.id, periodo.de, periodo.ate, a, m);
       tituloDoc = `FOLHA DE PONTO INDIVIDUAL — ${fmtBR(periodo.de)} A ${fmtBR(periodo.ate)}`;
     } else {
       const total = diasNoMes(a, m);
@@ -1603,7 +1615,7 @@
         <tbody>${linhas}</tbody>
         <tfoot>
           <tr>
-            <td colspan="6" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO" : "TOTAIS DO MÊS"}</td>
+            <td colspan="6" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO (MÊS)" : "TOTAIS DO MÊS"}</td>
             <td class="d-tot">${paraHoras(tm.normais + tm.extras)}</td>
             <td class="d-ex">${tm.extras ? "+" + paraHoras(tm.extras) : "0:00"}</td>
             <td class="d-oc">${tm.presentes} dia(s) trabalhado(s)</td>
