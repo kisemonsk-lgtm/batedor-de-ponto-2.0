@@ -1089,8 +1089,24 @@
       if (sit === "FO" || sit === "FZ") folgas++;
     });
 
+    const selDia = $("#dia");
+    if (selDia && d && String(selDia.value) !== String(d)) selDia.value = String(d);
     $("#rData").textContent = fmtDataCurta(a, m, d);
     $("#rTotal").textContent = lista.length;
+    // se um filtro está escondendo funcionários, avisa na tela em vez de parecer "sumiram"
+    const filtroAtivo = ($("#busca").value || "").trim() || $("#filtroFuncao").value
+      || ($("#filtroSel").value && $("#filtroSel").value !== "todos");
+    const dica = $("#dicaFiltro");
+    if (dica) {
+      if (filtroAtivo && lista.length !== estado.funcionarios.length) {
+        dica.innerHTML = `Mostrando <b>${lista.length}</b> de ${estado.funcionarios.length} funcionários por causa do filtro. ` +
+          `<button class="btn mini ghost" type="button" id="btnLimparFiltros">Limpar filtros</button>`;
+        dica.classList.remove("oculto");
+      } else {
+        dica.innerHTML = "";
+        dica.classList.add("oculto");
+      }
+    }
     $("#rSel").textContent = sel.size;
     $("#rPres").textContent = presentes;
     $("#rFalta").textContent = problemas;
@@ -1847,6 +1863,17 @@
     if (nome === "individual") renderIndividual();
   }
   $$(".tab").forEach((t) => t.addEventListener("click", () => trocarTab(t.dataset.tab)));
+
+  /* limpar filtros pela dica de aviso */
+  document.addEventListener("click", (ev) => {
+    const b = ev.target && ev.target.closest ? ev.target.closest("#btnLimparFiltros") : null;
+    if (!b) return;
+    $("#busca").value = "";
+    $("#filtroFuncao").value = "";
+    if ($("#filtroSel")) $("#filtroSel").value = "todos";
+    renderDia(); renderMes(); renderResumo();
+    toast("Filtros limpos.");
+  });
 
   /* ---------------- jornada diária ---------------- */
   function renderJornada() {
