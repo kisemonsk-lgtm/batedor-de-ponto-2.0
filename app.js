@@ -1966,6 +1966,13 @@
   aplicarTema(raiz.getAttribute("data-tema") || "claro");
 
   /* ---------------- início ---------------- */
+  // o navegador pode restaurar valores antigos nos campos de filtro ao reabrir a página;
+  // começamos sempre com "todos", senão a lista aparece vazia ou com 1 pessoa só
+  try {
+    if ($("#busca")) $("#busca").value = "";
+    if ($("#filtroFuncao")) $("#filtroFuncao").value = "";
+    if ($("#filtroSel")) $("#filtroSel").value = "todos";
+  } catch (e) {}
   estado.selecionados = estado.selecionados || [];
   montarSelectsData();
   garantirConfigPresenca();
