@@ -768,12 +768,16 @@
           <input type="text" data-campo="obs" value="${escapar(r.obs || "")}" placeholder="observação…" aria-label="Observação">
         </td>`;
       tbody.appendChild(tr);
-      pintarHoras(tr, r);
+      pintarHoras(tr, r, a, m, d);
     });
     atualizarInfoPresenca();
+    renderResumo();                              // mantém os cartões de cima sempre em dia
   }
 
-  function pintarHoras(tr, r) {
+  function pintarHoras(tr, r, a, m, d) {
+    if (a === undefined) {                       // compatibilidade: descobre a data na tela
+      a = Number($("#ano").value); m = Number($("#mes").value); d = diaSelecionado;
+    }
     const cel = tr.querySelector("[data-horas]");
     if (!cel) return;
     const sit = situacao(r);
