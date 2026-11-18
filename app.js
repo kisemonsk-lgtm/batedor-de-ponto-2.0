@@ -98,7 +98,7 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 8;
+  const LISTA_VERSAO = 9;
   /** importa os lançamentos de 26 a 31/10/2026 (arquivo oficial), casando pelo nome */
   function importarRegistrosOficiais(d) {
     if (typeof REGISTROS_IMPORTADOS === "undefined") return d;
@@ -197,9 +197,10 @@
 
   /* ---------------- utilidades ---------------- */
   const pad = (n) => String(n).padStart(2, "0");
+  // m é 0..11 (janeiro = 0), como em todo o app
   const chaveData = (a, m, d) => `${a}-${pad(m + 1)}-${pad(d)}`;
   const diasNoMes = (a, m) => new Date(a, m + 1, 0).getDate();
-  const nomeDia = (a, m, d) => new Date(a, m, d).getDay();
+  const nomeDia = (a, m, d) => new Date(a, m, d).getDay();  // m é 0..11
 
   function minutos(hhmm) {
     if (!hhmm || !/^\d{1,2}:\d{2}/.test(hhmm)) return null;
@@ -231,7 +232,15 @@
 
   function reg(fid, a, m, d) {
     const k = chaveData(a, m, d);
-    return (estado.registros[k] && estado.registros[k][fid]) || null;
+    const dia = estado.registros[k];
+    if (!dia) return null;
+    if (dia[fid]) return dia[fid];
+    // compatibilidade: se o dia estiver guardado como um único registro (sem separar por pessoa)
+    if (dia.e !== undefined || dia.s !== undefined || dia.marca !== undefined) {
+      const dono = dia.fid || dia.id;
+      if (!dono || dono === fid) return dia;
+    }
+    return null;
   }
 
   function garantirReg(fid, a, m, d) {
@@ -291,7 +300,7 @@
   }
   /** carga do dia: sábado = 4h30 (07:00–11:30) */
   function cargaDoDia(a, m, d) {
-    if (d && new Date(a, m - 1, d).getDay() === 6) return 270; // sábado: 07:00–11:30 = 4h30
+    if (d && new Date(a, m, d).getDay() === 6) return 270; // sábado: 07:00–11:30 = 4h30
     return cargaDiariaMin();
   }
   function fatorDe(r) {
@@ -1037,8 +1046,8 @@
         let texto = "";
 
         if (sit === "ok" || (r && r.e && !r.marca)) {
-          const min = minutosTrabalhados(r, cargaDoDia(a, m, dd));
-          const ex = minutosExtras(r, cargaDoDia(a, m, dd));
+          const min = minutosTrabalhados(r, cargaDoDia(a, m, d));
+          const ex = minutosExtras(r, cargaDoDia(a, m, d));
           if (min !== null) { totalMin += min; extrasMin += ex; texto = paraHoras(min).replace(":00", "h") + (ex > 0 ? `<sup class="ex-sup">+${paraHoras(ex)}</sup>` : ""); }
           else texto = r.e;
           cls.push("ok");
@@ -1188,9 +1197,9 @@
     .fi-resumo i { font-style: normal; font-size: 6.4pt; text-transform: uppercase; color: #444; }
     .fi-resumo b { font-size: 9pt; }
     .fi-resumo .fi-data { margin-left: auto; }
-    .fi-assinaturas { display: flex; gap: 10mm; margin-top: 8mm; }
-    .fi-ass { flex: 1; text-align: center; font-size: 7.6pt; color: #333; }
-    .fi-ass span { display: block; border-top: 1px solid #000; margin-bottom: 1.2mm; height: 8mm; }
+    table.fi-assinaturas { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 8mm 0; margin-top: 9mm; }
+    table.fi-assinaturas td.fi-ass { width: 50%; text-align: center; vertical-align: bottom; font-size: 7.6pt; color: #333; padding: 0; border: 0; }
+    .fi-ass span { display: block; border-top: 1px solid #000; margin-bottom: 1.2mm; height: 10mm; }
     .folha-individual td.falta, .folha-individual td.at, .folha-individual td.fe,
     .folha-individual td.fo, .folha-individual td.fz { color: #000 !important; font-weight: 700; }
   `;
@@ -1354,6 +1363,21 @@
   });
 
   $("#btnIndPDF").addEventListener("click", gerarPDFFolha);
+  window.__folha = { folhaHTML: folhaHTML, CSS_FOLHA: CSS_FOLHA, totaisPeriodo: totaisPeriodo,
+    funcionarios: FUNCIONARIOS_INICIAIS,
+    setRegistros: function (r) { Object.assign(estado.registros, r); },
+    setConfig: function (c) { estado.config = Object.assign(estado.config || {}, c); },
+    regT: function (fid) { return JSON.stringify(reg(fid, 2026, 9, 26)); },
+    regT2: function (fid) { return JSON.stringify(estado.registros["2026-10-26"] && estado.registros["2026-10-26"][fid]); },
+    regT3: function (a, m, d, fid) { const k = a + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0"); return k + " -> " + JSON.stringify(estado.registros[k] && estado.registros[k][fid]); },
+    regT4: function (a, m, d, fid) { const k = a + "-" + pad(m) + "-" + pad(d); return k + " -> " + JSON.stringify(estado.registros[k] && estado.registros[k][fid]); },
+    chaves26: function () { return JSON.stringify(Object.keys(estado.registros["2026-10-26"] || {})); },
+    dia26: function () { return JSON.stringify(estado.registros["2026-10-26"]).slice(0, 200); },
+    mesmoEstado: function (e) { return e === estado; },
+    estadoInterno: estado,
+    chaveT: function (a, m, d) { return chaveData(a, m, d); },
+    config: function () { return estado.config; },
+    dias: function () { return JSON.stringify(Object.keys(estado.registros).slice(0,8)); } };
   if ($("#btnIndTodosPDF")) $("#btnIndTodosPDF").addEventListener("click", gerarPDFTodos);
   window.gerarPDFTodos = gerarPDFTodos;
 
@@ -1549,7 +1573,7 @@
 
   /** uma folha (página A4) por funcionário */
   /** folha individual: mês inteiro (dia 1 ao último dia) ou período De/Até */
-  function folhaHTML(f, num, a, m, periodo) {
+  function folhaHTML(f, num, a, m, periodo, periodoTexto) {
     const modoPeriodo = !!(periodo && periodo.de && periodo.ate);
     const carga = cargaDiariaMin();
     let tm, linhas = "", tituloDoc;
@@ -1567,7 +1591,7 @@
     for (const d of diasDaFolha(a, m, periodo)) {
       const r = reg(f.id, a, m, d);
       const sit = situacao(r);
-      const wd = nomeDia(a, m, d);
+      const wd = new Date(a, m, d).getDay();   // m é 0..11
       const cls = ["dia-cel"];
       if (wd === 0) cls.push("domingo");
       if (sit === "F") cls.push("falta");
@@ -1579,7 +1603,6 @@
       const ex = r ? minutosExtras(r, cargaDoDia(a, m, d)) : 0;
       linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}">
         <td class="d-num">${pad(d)}</td>
-        <td class="d-sem">${SEMANA[wd]}</td>
         <td>${r ? escapar(r.e || "") : ""}</td>
         <td>${r ? escapar(r.sa || "") : ""}</td>
         <td>${r ? escapar(r.r || "") : ""}</td>
@@ -1603,7 +1626,7 @@
         <div class="fi-mes">
           <div class="fi-mes-txt">${modoPeriodo
             ? `${fmtBR(periodo.de)} – ${fmtBR(periodo.ate)}`
-            : `${MESES_EXT[m].toUpperCase()} / ${a}`}</div>
+            : (String(periodoTexto || "").trim() || `${MESES_EXT[m].toUpperCase()} / ${a}`)}</div>
           <div class="fi-num">Nº ${String(num).padStart(2, "0")}</div>
         </div>
       </header>
@@ -1617,14 +1640,14 @@
       <table class="fi-tabela">
         <thead>
           <tr>
-            <th>Dia</th><th>Sem</th><th>Entrada</th><th>Saída Almoço</th><th>Retorno</th><th>Saída</th>
+            <th>Dia</th><th>Entrada</th><th>Saída Almoço</th><th>Retorno</th><th>Saída</th>
             <th>Horas</th><th>Extras</th><th>Ocorrência / Obs</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
         <tfoot>
           <tr>
-            <td colspan="6" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO (MÊS)" : "TOTAIS DO MÊS"}</td>
+            <td colspan="5" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO (MÊS)" : "TOTAIS DO MÊS"}</td>
             <td class="d-tot">${paraHoras(tm.normais + tm.extras)}</td>
             <td class="d-ex">${tm.extras ? "+" + paraHoras(tm.extras) : "0:00"}</td>
             <td class="d-oc">${tm.presentes} dia(s) trabalhado(s)</td>
@@ -1641,10 +1664,10 @@
         <span class="fi-data"><i>Emitido</i> <b>${fmtDataCurta(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())}</b></span>
       </div>
 
-      <div class="fi-assinaturas">
-        <div class="fi-ass"><span></span>Assinatura do funcionário</div>
-        <div class="fi-ass"><span></span>Responsável — assinatura e carimbo</div>
-      </div>
+      <table class="fi-assinaturas"><tr>
+        <td class="fi-ass"><span></span>Assinatura do funcionário</td>
+        <td class="fi-ass"><span></span>Assinatura do responsável</td>
+      </tr></table>
     </article>`;
   }
 
