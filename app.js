@@ -1191,26 +1191,18 @@
   function estiloImpressao() {
     const base = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
       .map((l) => `@import url("${l.href}");`).join("\n");
+    // usa exatamente o mesmo desenho do PDF (título, cabeçalhos, faixa do mês, fonte)
     return `${base}
-      @page { size: A4 portrait; margin: 10mm 10mm 8mm 10mm; }
+      ${CSS_FOLHA}
+      @page { size: A4 portrait; margin: 10mm; }
+      /* nada de "atualizar toda hora": impressão sempre em fundo branco */
       html, body { background: #fff !important; color: #000 !important; margin: 0; padding: 0; }
-      body { font-family: "Segoe UI", Roboto, Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; }
-      .folha-individual { border: none !important; box-shadow: none !important; padding: 0 !important;
-        margin: 0 auto !important; max-width: 190mm !important; width: 100% !important; break-after: auto !important; page-break-after: auto !important; }
-      .fi-topo { border-bottom: 2px solid #000; }
-      .fi-topo img { width: 26mm; }
-      table.fi-tabela th, table.fi-tabela td { border: 1px solid #000 !important; }
-      table.fi-tabela th { background: #fff !important; color: #000 !important; font-size: 6.6pt; }
-      table.fi-tabela td { padding: .8mm 1.2mm; font-size: 8.2pt; line-height: 1.15; }
-      .folha-individual { padding: 0 !important; }
-      table.fi-tabela tr.linha-dom td { background: #fff !important; color: #444 !important; }
+      .folha-individual { break-after: auto !important; page-break-after: auto !important; }
+      .folha-individual + .folha-individual { break-before: page; page-break-before: always; }
+      .fi-topo img { width: 20mm; }
       table.fi-tabela tfoot td { background: #f0f0f0 !important; }
-      .fi-empresa span, .fi-campos span, .fi-resumo span, .fi-ass, .fi-rodape { color: #333 !important; }
-      .fi-campos b, .fi-resumo b { color: #000 !important; }
-      .fi-resumo { border: 1px solid #999 !important; }
-      .fi-assinaturas { margin-top: 7mm; }
-      .fi-ass span { border-top: 1px solid #000; height: 8mm; }
-      .folha-individual td.falta, .folha-individual td.at, .folha-individual td.fe, .folha-individual td.fo { color: #000 !important; }`;
+      .folha-individual td.falta, .folha-individual td.at, .folha-individual td.fe,
+      .folha-individual td.fo, .folha-individual td.fz { color: #000 !important; }`;
   }
 
 
