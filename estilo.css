@@ -453,3 +453,54 @@ table.fi-tabela tfoot td { background: var(--thead); font-weight: 700; }
   flex-wrap: wrap;
 }
 .dica-filtro.oculto { display: none; }
+
+/* =========================================================
+   TAMANHO DA FOLHA IMPRESSA
+   A4 (padrão) · A5 · cartão 3 × 4 cm
+   No cartão, a folha do mês vira um comprovante de bolso:
+   cabeçalho, mês e total. A folha completa continua no A4.
+   ========================================================= */
+@media print {
+  @page { size: A4 portrait; margin: 8mm; }
+
+  /* ---- A5 ---- */
+  html[data-papel="a5"] .folha-individual { max-width: 148mm; padding: 4mm 4mm 3mm; }
+  html[data-papel="a5"] table.fi-tabela { font-size: 7pt; }
+  html[data-papel="a5"] table.fi-tabela th { font-size: 5.8pt; }
+  html[data-papel="a5"] table.fi-tabela td { padding: .5mm .8mm; }
+  html[data-papel="a5"] .fi-topo img { width: 14mm; }
+  html[data-papel="a5"] .fi-empresa strong { font-size: 9pt; }
+  html[data-papel="a5"] .fi-campos b { font-size: 8pt; }
+  html[data-papel="a5"] .fi-assinaturas { margin-top: 4mm; gap: 6mm; }
+
+  /* ---- CARTÃO 3 × 4 cm ---- */
+  html[data-papel="cartao"] .folha-individual {
+    width: 30mm; height: 40mm; max-width: 30mm; padding: 1.2mm 1.4mm;
+    font-size: 3.6pt; line-height: 1.15; overflow: hidden;
+    page-break-after: always; break-after: page;
+    border: .2mm solid #000; border-radius: 0; box-shadow: none; margin: 0;
+  }
+  html[data-papel="cartao"] .folha-individual:last-child { page-break-after: auto; break-after: auto; }
+  html[data-papel="cartao"] .fi-topo { gap: 1mm; padding-bottom: .6mm; border-bottom-width: .3mm; }
+  html[data-papel="cartao"] .fi-topo img { width: 4mm; }
+  html[data-papel="cartao"] .fi-empresa strong { font-size: 3.4pt; letter-spacing: 0; }
+  html[data-papel="cartao"] .fi-empresa span { font-size: 2.8pt; }
+  html[data-papel="cartao"] .fi-empresa .fi-doc { display: none; }
+  html[data-papel="cartao"] .fi-mes-txt { font-size: 4pt; }
+  html[data-papel="cartao"] .fi-num { font-size: 2.8pt; margin-top: 0; }
+  html[data-papel="cartao"] .fi-campos { gap: .4mm 1.6mm; padding: .6mm 0; margin-bottom: .6mm; border-bottom-width: .2mm; }
+  html[data-papel="cartao"] .fi-campos span { font-size: 2.4pt; letter-spacing: 0; }
+  html[data-papel="cartao"] .fi-campos b { font-size: 3.4pt; }
+  /* a tabela do mês inteiro não cabe em 3 × 4 cm: fica só o resumo */
+  html[data-papel="cartao"] table.fi-tabela { display: none; }
+  html[data-papel="cartao"] .fi-resumo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .3mm 1mm;
+    margin-top: .4mm; padding: .5mm .7mm; border-width: .2mm; border-radius: 0; font-size: 3pt;
+  }
+  html[data-papel="cartao"] .fi-resumo i { font-size: 2.4pt; letter-spacing: 0; }
+  html[data-papel="cartao"] .fi-resumo b { font-size: 3.2pt; }
+  html[data-papel="cartao"] .fi-resumo .fi-data { display: none; }
+  html[data-papel="cartao"] .fi-assinaturas { margin-top: 1.2mm; gap: 1.5mm; }
+  html[data-papel="cartao"] .fi-ass { font-size: 2.4pt; }
+  html[data-papel="cartao"] .fi-ass span { height: 3mm; margin-bottom: .3mm; }
+}
