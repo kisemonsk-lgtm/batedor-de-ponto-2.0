@@ -2157,14 +2157,18 @@
   aplicarTema(raiz.getAttribute("data-tema") || "claro");
 
   /* ---------------- início ---------------- */
+  let jaDesenhou = false;
   function desenharTudo() {
     // o navegador pode restaurar valores antigos nos campos de filtro ao reabrir a página;
     // começamos sempre com "todos", senão a lista aparece vazia ou com 1 pessoa só
     try {
-      if ($("#busca")) $("#busca").value = "";
-      if ($("#filtroFuncao")) $("#filtroFuncao").value = "";
-      if ($("#filtroSel")) $("#filtroSel").value = "todos";
+      if (!jaDesenhou) {              // só na primeira abertura, não a cada atualização da nuvem
+        if ($("#busca")) $("#busca").value = "";
+        if ($("#filtroFuncao")) $("#filtroFuncao").value = "";
+        if ($("#filtroSel")) $("#filtroSel").value = "todos";
+      }
     } catch (e) {}
+    jaDesenhou = true;
     estado.selecionados = estado.selecionados || [];
     montarSelectsData();
     garantirConfigPresenca();
@@ -2202,6 +2206,14 @@
         if (aba && typeof trocarTab === "function") trocarTab(aba);
         desenhando = false;
         toast(quem ? `Dados recebidos do ${quem}.` : "Dados atualizados da nuvem.");
+      },
+      // true enquanto a pessoa está digitando ou a aba está escondida:
+      // a nuvem não pode redesenhar a tela nesse momento
+      ocupado: () => {
+        const el = document.activeElement;
+        if (document.hidden) return true;
+        if (!el || el === document.body) return false;
+        return /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || el.isContentEditable === true;
       },
       dispositivo: () => {
         const u = navigator.userAgent || "";
