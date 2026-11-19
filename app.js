@@ -13,6 +13,9 @@
   const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const SEMANA_EXT = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
+  /* versão da lista oficial do funcionarios.js — é usada já no carregamento */
+  const LISTA_VERSAO = 9;
+
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const hoje = new Date();
@@ -29,7 +32,9 @@
       if (bruto) {
         const dados = JSON.parse(bruto);
         if (dados && Array.isArray(dados.funcionarios) && dados.funcionarios.length) {
-          const pronto = normalizar(sincronizarListaInicial(dados));
+          // NÃO chama sincronizarListaInicial aqui: quem foi excluído não pode voltar
+          dados.listaVersao = LISTA_VERSAO;
+          const pronto = normalizar(dados);
           if (pronto.registrosImportados !== 1) {
             importarRegistrosOficiais(pronto);
             pronto.registrosImportados = 1;   // roda uma única vez por aparelho
@@ -78,6 +83,15 @@
       if (f.novo) o.novo = true;      // mantém a marca "novo" de quem foi cadastrado na tela
       return o;
     });
+    // quem foi excluído numa tela (ou em outro aparelho) não volta
+    const exc = d.excluidos || {};
+    if (Object.keys(exc).length) {
+      d.funcionarios = d.funcionarios.filter((f) => {
+        const e = exc[f.id];
+        if (!e) return true;
+        return !!(f.recriadoEm && f.recriadoEm > (e.em || 0));
+      });
+    }
     d.registros = d.registros || {};
     // o carimbo (at) de cada lançamento é mantido: é ele que decide quem vence na nuvem
     d.config = Object.assign({ horaEntrada: "07:00", horaSaida: "16:30", cargaDiaria: 8, tolerancia: 5, valorHora: 0, diasUteis: 22, fator: 50, horaPadrao: "07:00", saidaPadrao: "16:30", almocoPadrao: "11:30", retornoPadrao: "13:00", horaExtra: "18:00" }, d.config || {});
@@ -99,7 +113,6 @@
 
   /* ---- atualiza a lista salva quando sai versão nova do funcionarios.js ---- */
   /* só ADICIONA quem entrou na lista; não apaga nem altera quem já está */
-  const LISTA_VERSAO = 9;
   /** importa os lançamentos de 26 a 31/10/2026 (arquivo oficial), casando pelo nome */
   function importarRegistrosOficiais(d) {
     if (typeof REGISTROS_IMPORTADOS === "undefined") return d;
