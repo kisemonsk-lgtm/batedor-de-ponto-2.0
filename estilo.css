@@ -538,3 +538,57 @@ table.fi-tabela tr.linha-dom td.d-num { font-style: italic; font-weight: 700; le
 @media print {
   table.fi-tabela tr.linha-dom td { color: #000 !important; }
 }
+
+/* =========================================================
+   LEGENDA DAS OCORRÊNCIAS (F, AT, FE, FO, FZ) — canto direito
+   ========================================================= */
+.pb-legenda {
+  margin-left: auto;
+  position: relative;
+  font-size: 11px;
+  align-self: center;
+}
+.pb-legenda summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  border: 1px solid var(--borda, #d5d8de);
+  border-radius: 8px;
+  background: var(--card, #fff);
+  color: var(--texto, #222);
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+}
+.pb-legenda summary::-webkit-details-marker { display: none; }
+.pb-legenda summary:hover { border-color: var(--destaque, #1f6feb); }
+.pb-legenda[open] summary { border-color: var(--destaque, #1f6feb); }
+.pb-legenda ul {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  width: 300px;
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  background: var(--card, #fff);
+  color: var(--texto, #222);
+  border: 1px solid var(--borda, #d5d8de);
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .18);
+}
+.pb-legenda li { padding: 3px 0; display: flex; gap: 7px; align-items: baseline; }
+.pb-legenda li b {
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+  border-radius: 5px;
+  padding: 1px 4px;
+  background: #eef1f6;
+  color: #222;
+  font-size: 10px;
+}
+.pb-legenda li span { font-weight: 600; }
+.pb-legenda p { margin: 8px 0 0; font-size: 10.5px; line-height: 1.35; color: var(--suave, #667); }
+@media print { .pb-legenda { display: none !important; } }
