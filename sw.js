@@ -1,11 +1,13 @@
 /* Cache do app para funcionar no tablet/celular mesmo sem internet */
-const CACHE = "cas-ponto-v42";
+const CACHE = "cas-ponto-v43";
 const ARQUIVOS = [
   "./",
   "./index.html",
   "./estilo.css",
   "./app.js",
   "./funcionarios.js",
+  "./nuvem.js",
+  "./firebase-config.js",
   "./registros-outubro.js",
   "./logo-cas.png",
   "./jspdf.umd.min.js",
