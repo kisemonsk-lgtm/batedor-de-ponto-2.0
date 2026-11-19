@@ -1554,16 +1554,25 @@
   };
 
   /** lista de dias que aparecem na folha: mês inteiro ou período */
+  /* dias da folha.
+     - Sem período: dia 1 ao último do mês (a, m).
+     - Com período: TODOS os dias do período, mesmo atravessando meses
+       (ex.: 26/10/2026 até 25/11/2026 = 31 dias numa folha só).
+     Cada item é { d, m, a, primeiro } — "primeiro" marca o dia 1º de um mês. */
   function diasDaFolha(a, m, periodo) {
+    const out = [];
     if (!periodo || !periodo.de || !periodo.ate) {
-      const out = [];
-      for (let d = 1; d <= diasNoMes(a, m); d++) out.push(d);
+      for (let d = 1; d <= diasNoMes(a, m); d++) out.push({ d, m, a, primeiro: d === 1 });   // m aqui é 1..12
       return out;
     }
     const de = dataDeISO(periodo.de), ate = dataDeISO(periodo.ate);
-    const out = [];
     for (let data = new Date(de); data <= ate; data.setDate(data.getDate() + 1)) {
-      if (data.getFullYear() === a && data.getMonth() + 1 === m) out.push(data.getDate());
+      out.push({
+        d: data.getDate(),
+        m: data.getMonth() + 1,
+        a: data.getFullYear(),
+        primeiro: data.getDate() === 1
+      });
     }
     return out;
   }
@@ -1574,11 +1583,11 @@
     let normais = 0, extras = 0, extras50 = 0, extras100 = 0, presentes = 0;
     for (let data = new Date(de); data <= ate; data.setDate(data.getDate() + 1)) {
       const a = data.getFullYear(), m = data.getMonth() + 1, d = data.getDate();
-      const r = reg(fid, a, m, d);
+      const r = reg(fid, a, m - 1, d);          // reg() usa m de 0 a 11
       if (!r) continue;
       const sit = situacao(r);
       if (["F", "AT", "FE", "FO", "FZ", "vazio"].includes(sit)) continue;
-      const carga = cargaDoDia(a, m, d);
+      const carga = cargaDoDia(a, m - 1, d);
       const min = minutosTrabalhados(r, carga);
       if (min === null) continue;
       presentes++;
@@ -1613,19 +1622,21 @@
     let tm, linhas = "", tituloDoc;
 
     if (modoPeriodo) {
-      // numa folha por mês, os totais contam só os dias deste mês
-      tm = totaisPeriodoMes(f.id, periodo.de, periodo.ate, a, m);
+      // o período inteiro numa folha só (ex.: 26/10/2026 a 25/11/2026)
+      tm = totaisPeriodo(f.id, periodo.de, periodo.ate);
       tituloDoc = `FOLHA DE PONTO INDIVIDUAL — ${fmtBR(periodo.de)} A ${fmtBR(periodo.ate)}`;
     } else {
       const total = diasNoMes(a, m);
-      tm = totaisMes(f.id, a, m, total);
+      tm = totaisMes(f.id, a, m - 1, total);       // totaisMes usa m de 0 a 11
       tituloDoc = `FOLHA DE PONTO INDIVIDUAL — DIA 1 AO ${total}`;
     }
 
-    for (const d of diasDaFolha(a, m, periodo)) {
-      const r = reg(f.id, a, m, d);
+    let mesNaFolha = -1;   // para saber quando o mês vira dentro da folha
+    for (const dia of diasDaFolha(a, m, periodo)) {
+      const d = dia.d, dm = dia.m, da = dia.a;
+      const r = reg(f.id, da, dm - 1, d);          // reg() usa m de 0 a 11
       const sit = situacao(r);
-      const wd = new Date(a, m, d).getDay();   // m é 0..11
+      const wd = new Date(da, dm - 1, d).getDay();
       const cls = ["dia-cel"];
       if (wd === 0) cls.push("domingo");
       if (sit === "F") cls.push("falta");
@@ -1634,14 +1645,31 @@
       if (sit === "FO") cls.push("fo");
       if (sit === "FZ") cls.push("fz");
 
-      const ex = r ? minutosExtras(r, cargaDoDia(a, m, d)) : 0;
-      linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}">
-        <td class="d-num">${pad(d)}</td>
+      const cargaDia = cargaDoDia(da, dm - 1, d);
+      const ex = r ? minutosExtras(r, cargaDia) : 0;
+
+      // faixa com o nome do mês: antes do dia 26 e antes do dia 1º de cada mês
+      if (modoPeriodo && (dm !== mesNaFolha) && (d === 26 || d === 1)) {
+        mesNaFolha = dm;
+        linhas += `<tr class="linha-mes-folha"><td colspan="8">${MESES[dm - 1].toUpperCase()} / ${da}</td></tr>`;
+      } else if (modoPeriodo && dm !== mesNaFolha) {
+        mesNaFolha = dm;   // período que começa no meio do mês: marca o mês na primeira linha
+        linhas += `<tr class="linha-mes-folha"><td colspan="8">${MESES[dm - 1].toUpperCase()} / ${da}</td></tr>`;
+      }
+
+      const mesCurto = MESES_CURTO[dm - 1];
+      // no modo período a coluna mostra "26 Out", "01 Nov", "1º Nov"… para não confundir os meses
+      const rotuloDia = modoPeriodo
+        ? (dia.primeiro ? `1º ${mesCurto}` : `${pad(d)} ${mesCurto}`)
+        : pad(d);
+
+      linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}${dia.primeiro ? " linha-dia1" : ""}">
+        <td class="d-num" title="${pad(d)}/${pad(dm)}/${da}">${rotuloDia}</td>
         <td>${r ? escapar(r.e || "") : ""}</td>
         <td>${r ? escapar(r.sa || "") : ""}</td>
         <td>${r ? escapar(r.r || "") : ""}</td>
         <td>${r ? escapar(r.s || "") : ""}</td>
-        <td class="d-tot">${r && r.e && r.s ? paraHoras(minutosTrabalhados(r, cargaDoDia(a, m, d)) || 0) : ""}</td>
+        <td class="d-tot">${r && r.e && r.s ? paraHoras(minutosTrabalhados(r, cargaDia) || 0) : ""}</td>
         <td class="d-ex">${ex ? "+" + paraHoras(ex) : ""}</td>
         <td class="d-oc">${["F", "AT", "FE", "FO", "FZ"].includes(sit) ? sit + (r && r.obs ? " — " + escapar(r.obs) : "") : (r && r.obs ? escapar(r.obs) : "")}</td>
       </tr>`;
@@ -1681,7 +1709,7 @@
         <tbody>${linhas}</tbody>
         <tfoot>
           <tr>
-            <td colspan="5" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO (MÊS)" : "TOTAIS DO MÊS"}</td>
+            <td colspan="5" class="fi-tot-rot">${modoPeriodo ? "TOTAIS DO PERÍODO" : "TOTAIS DO MÊS"}</td>
             <td class="d-tot">${paraHoras(tm.normais + tm.extras)}</td>
             <td class="d-ex">${tm.extras ? "+" + paraHoras(tm.extras) : "0:00"}</td>
             <td class="d-oc">${tm.presentes} dia(s) trabalhado(s)</td>
@@ -1738,6 +1766,23 @@
   }
 
   /** preenche/limpa os campos De/Até da aba */
+  /* ciclo de ponto da empresa: fecha dia 25 e abre outro no dia 26
+     (ex.: 26/10/2026 até 25/11/2026) */
+  function cicloDePonto(iso) {
+    const base = dataDeISO(iso);
+    const a = base.getFullYear(), m = base.getMonth() + 1, d = base.getDate();
+    let iniAno = a, iniMes = m;
+    if (d < 26) {           // ainda está no ciclo que começou no mês anterior
+      iniMes -= 1;
+      if (iniMes < 1) { iniMes = 12; iniAno -= 1; }
+    }
+    const de = `${iniAno}-${String(iniMes).padStart(2, "0")}-26`;
+    let fimAno = iniAno, fimMes = iniMes + 1;
+    if (fimMes > 12) { fimMes = 1; fimAno += 1; }
+    const ate = `${fimAno}-${String(fimMes).padStart(2, "0")}-25`;
+    return { de, ate };
+  }
+
   function renderPeriodoIndividual() {
     const de = $("#indDe"), ate = $("#indAte");
     if (!de || !ate) return;
@@ -1794,6 +1839,29 @@
     if (!$("#indDe").value || !$("#indAte").value) return;
     $("#btnIndPeriodo").click();
   });
+  /* botão do ciclo de ponto (dia 26 ao dia 25 do mês seguinte) */
+  (function criarBotaoCiclo() {
+    const alvo = $("#btnIndMes");
+    if (!alvo || $("#btnIndCiclo")) return;
+    const b = document.createElement("button");
+    b.id = "btnIndCiclo";
+    b.type = "button";
+    b.className = "btn ghost";
+    b.textContent = "🗓 26 → 25 (ciclo)";
+    b.title = "Folha do ciclo de ponto: do dia 26 ao dia 25 do mês seguinte";
+    alvo.parentNode.insertBefore(b, alvo.nextSibling);
+    b.addEventListener("click", () => {
+      const ref = $("#indAte") && $("#indAte").value ? $("#indAte").value : isoDeHoje();
+      const c = cicloDePonto(ref);
+      periodoIndividual = c;
+      if ($("#indDe")) $("#indDe").value = c.de;
+      if ($("#indAte")) $("#indAte").value = c.ate;
+      renderPeriodoIndividual();
+      renderIndividual();
+      toast(`Ciclo de ${fmtBR(c.de)} a ${fmtBR(c.ate)} numa folha só.`);
+    });
+  })();
+
   renderPeriodoIndividual();
   $("#btnIndSel").addEventListener("click", () => { gerarTodos = false; renderIndividual(); });
   $("#btnIndTodos").addEventListener("click", () => { gerarTodos = true; renderIndividual(); });
