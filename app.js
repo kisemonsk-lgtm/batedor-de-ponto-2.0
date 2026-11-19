@@ -79,6 +79,7 @@
       return o;
     });
     d.registros = d.registros || {};
+    // o carimbo (at) de cada lançamento é mantido: é ele que decide quem vence na nuvem
     d.config = Object.assign({ horaEntrada: "07:00", horaSaida: "16:30", cargaDiaria: 8, tolerancia: 5, valorHora: 0, diasUteis: 22, fator: 50, horaPadrao: "07:00", saidaPadrao: "16:30", almocoPadrao: "11:30", retornoPadrao: "13:00", horaExtra: "18:00" }, d.config || {});
     return d;
   }
@@ -176,6 +177,16 @@
   }
 
   let salvarTimer = null;
+  /** grava SÓ no navegador (usado quando a nuvem já tem a versão boa) */
+  function salvarLocal() {
+    clearTimeout(salvarTimer);
+    try {
+      estado.atualizadoEm = Date.now();
+      localStorage.setItem(CHAVE, JSON.stringify(estado));
+      backupFuncionarios();
+    } catch (e) { console.warn("Não foi possível salvar neste navegador", e); }
+  }
+
   function salvar(imediato) {
     clearTimeout(salvarTimer);
     const status = $("#statusSalvo");
@@ -183,10 +194,12 @@
     status.classList.add("pendente");
     const gravar = () => {
       try {
+        estado.atualizadoEm = Date.now();
         localStorage.setItem(CHAVE, JSON.stringify(estado));
         backupFuncionarios();
         status.textContent = "salvo";
         status.classList.remove("pendente");
+        if (window.CASNuvem) window.CASNuvem.agendarSalvar(estado);
       } catch (e) {
         status.textContent = "erro ao salvar";
         toast("Não foi possível salvar os dados neste navegador.");
@@ -247,7 +260,9 @@
     const k = chaveData(a, m, d);
     if (!estado.registros[k]) estado.registros[k] = {};
     if (!estado.registros[k][fid]) estado.registros[k][fid] = { e: "", sa: "", r: "", s: "", obs: "", marca: "", extra: "", fator: "" };
-    return estado.registros[k][fid];
+    const r = estado.registros[k][fid];
+    r.at = Date.now();          // carimbo: diz qual aparelho lançou por último
+    return r;
   }
 
   /** minutos trabalhados; null quando não há dados suficientes */
@@ -435,7 +450,7 @@
       }
     });
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`Lançados ${total} dia(s) de trabalho para ${nomes} funcionário(s).`);
     return total;
   }
@@ -461,7 +476,7 @@
       }
     });
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`Lançados ${total} dia(s) de trabalho (do início até hoje).`);
   }
 
@@ -555,7 +570,7 @@
     sAno.addEventListener("change", () => { ajustarDiaAoMes(); });
     $("#dia").addEventListener("change", (e) => {
       diaSelecionado = Number(e.target.value);
-      renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
+      renderDia(); renderResumo(); renderMes(); renderTitulos();
     });
   }
 
@@ -568,7 +583,7 @@
     const novo = `${a}-${pad(m + 1)}-${pad(diaSelecionado)}`;
     if ($("#lpDe")) $("#lpDe").value = novo;          // o lançamento segue o mês escolhido no topo
     if ($("#lpAte")) $("#lpAte").value = novo;
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
+    renderDia(); renderResumo(); renderMes(); renderTitulos();
   }
 
   /* ---- memória do mês escolhido (não volta sozinho para outro mês) ---- */
@@ -594,7 +609,7 @@
     ajustarDiaAoMes();
     diaSelecionado = Math.min(dia, diasNoMes(a, m));
     montarDias();
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual(); renderTitulos();
+    renderDia(); renderResumo(); renderMes(); renderTitulos();
     return { a, m };
   }
 
@@ -646,9 +661,9 @@
   function marcarPresente(fid, a, m, d, hora) {
     const r = garantirReg(fid, a, m, d);
     const c = estado.config;
+    const sabado = new Date(a, m, d).getDay() === 6;   // m é 0..11 (novembro = 10)
     r.e = hora || horaPadrao();        // 07:00
     if (sabado) { r.sa = ""; r.r = ""; } else { r.sa = c.almocoPadrao; r.r = c.retornoPadrao; }
-    const sabado = new Date(a, m - 1, d).getDay() === 6;
     r.s = r.s || (sabado ? "11:30" : (c.saidaPadrao || "16:30"));   // sábado: até 11:30
     r.marca = "";
     return r;
@@ -659,7 +674,6 @@
     const r = garantirReg(fid, a, m, d);
     r.e = r.sa = r.r = r.s = "";
     r.marca = "F";
-    if (!r.obs) r.obs = "não veio";
     return r;
   }
 
@@ -705,7 +719,7 @@
         n2++;
       });
       salvar(true);
-      renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+      renderDia(); renderResumo(); renderMes();
       toast(`Saída ${horaSaida} aplicada em todos os ${n2} que já tinham entrada.`);
       return;
     }
@@ -722,7 +736,7 @@
       n++;
     });
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`Saída ${horaSaida} registrada para ${n} funcionário(s).`);
   }
 
@@ -742,7 +756,7 @@
       n++;
     });
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`${n} funcionário(s) marcados como ${rotulos[tipo] || tipo}.`);
   }
 
@@ -852,6 +866,7 @@
     if (rVazio(r) && estado.registros[chaveData(a, m, d)]) {
       delete estado.registros[chaveData(a, m, d)][id];
     }
+    ev.target.blur();                 // solta o campo antes de redesenhar a tabela
     salvar();
     pintarHoras(tr, reg(id, a, m, d) || {});
     renderResumo(); renderMes(); renderExtra(); renderIndividual();
@@ -891,7 +906,7 @@
     });
     estado.config.horaPadrao = hora;
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`Ponto registrado para ${n} funcionário(s) — entrada ${hora}.`);
   });
 
@@ -906,7 +921,7 @@
 
     lista.forEach((f) => marcarFalta(f.id, a, m, d));
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`${lista.length} falta(s) registrada(s).`);
   });
 
@@ -985,7 +1000,7 @@
     estado.config.retornoPadrao = ev.target.value || "13:00";
     estado.config.horaSaida = estado.config.horaSaida || "16:30";
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`Retorno do almoço: ${estado.config.retornoPadrao}.`);
   });
 
@@ -1889,7 +1904,7 @@
     if (!confirm(`Restaurar ${lista.length} funcionário(s) do backup automático? A lista atual será substituída.`)) return;
     estado.funcionarios = normalizar({ funcionarios: lista }).funcionarios;
     salvar(true);
-    renderFuncionarios(); renderDia(); renderMes(); renderResumo(); renderIndividual();
+    renderFuncionarios(); renderDia(); renderMes(); renderResumo();
     toast("Lista restaurada do backup.");
   });
 
@@ -1905,7 +1920,7 @@
         if (!confirm(`Carregar ${lista.length} funcionário(s) deste arquivo? A lista atual será substituída.`)) return;
         estado.funcionarios = normalizar({ funcionarios: lista }).funcionarios;
         salvar(true);
-        renderFuncionarios(); renderDia(); renderMes(); renderResumo(); renderIndividual();
+        renderFuncionarios(); renderDia(); renderMes(); renderResumo();
         toast("Lista carregada.");
       } catch (e) { toast("Arquivo inválido."); }
       ev.target.value = "";
@@ -1928,18 +1943,24 @@
 
     if (editandoId) {
       const f = estado.funcionarios.find((x) => x.id === editandoId);
-      if (f) { f.nome = nome; f.funcao = funcao; f.ativo = $("#fAtivo").checked; }
+      if (f) {
+        const ficouAtivo = $("#fAtivo").checked;
+        if (f.ativo && !ficouAtivo) f.desativadoEm = Date.now();
+        f.nome = nome; f.funcao = funcao; f.ativo = ficouAtivo;
+      }
       toast("Funcionário atualizado.");
     } else {
+      const mesmoNome = (estado.funcionarios || []).find((x) => x.nome.toLowerCase() === nome.toLowerCase());
       estado.funcionarios.push({
         id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        nome, funcao, ativo: $("#fAtivo").checked, novo: true
+        nome, funcao, ativo: $("#fAtivo").checked, novo: true,
+        recriadoEm: mesmoNome ? Date.now() : undefined
       });
       toast(`${nome} adicionado — confira na aba Ponto do dia (fim da lista).`);
     }
     cancelarEdicao();
     salvar(true);
-    renderFuncionarios(); renderDia(); renderMes(); renderResumo(); renderIndividual();
+    renderFuncionarios(); renderDia(); renderMes(); renderResumo();
   });
 
   $("#tabelaFunc").addEventListener("click", (ev) => {
@@ -1961,11 +1982,14 @@
 
     if (btn.dataset.acao === "excluir") {
       if (!confirm(`Excluir "${f.nome}"? Os registros de ponto dele também serão removidos.`)) return;
+      // fica marcado como excluído para a nuvem não trazer ele de volta de outro aparelho
+      estado.excluidos = estado.excluidos || {};
+      estado.excluidos[f.id] = { nome: f.nome, em: Date.now() };
       estado.funcionarios = estado.funcionarios.filter((x) => x.id !== f.id);
       Object.values(estado.registros).forEach((dia) => delete dia[f.id]);
       estado.selecionados = (estado.selecionados || []).filter((id) => id !== f.id);
       salvar(true);
-      renderFuncionarios(); renderDia(); renderMes(); renderResumo(); renderIndividual();
+      renderFuncionarios(); renderDia(); renderMes(); renderResumo();
       toast("Funcionário excluído.");
     }
   });
@@ -2010,7 +2034,7 @@
   $("#cfgJornada").addEventListener("change", (ev) => {
     estado.config.cargaDiaria = Number(ev.target.value) || 7;
     salvar(true);
-    renderDia(); renderResumo(); renderMes(); renderExtra(); renderIndividual();
+    renderDia(); renderResumo(); renderMes();
     toast(`Jornada definida em ${paraHoras(cargaDiariaMin())} por dia.`);
   });
 
@@ -2092,26 +2116,114 @@
   aplicarTema(raiz.getAttribute("data-tema") || "claro");
 
   /* ---------------- início ---------------- */
-  // o navegador pode restaurar valores antigos nos campos de filtro ao reabrir a página;
-  // começamos sempre com "todos", senão a lista aparece vazia ou com 1 pessoa só
-  try {
-    if ($("#busca")) $("#busca").value = "";
-    if ($("#filtroFuncao")) $("#filtroFuncao").value = "";
-    if ($("#filtroSel")) $("#filtroSel").value = "todos";
-  } catch (e) {}
-  estado.selecionados = estado.selecionados || [];
-  montarSelectsData();
-  garantirConfigPresenca();
-  renderJornada();
-  renderRetorno();
-  renderSaidas();
-  $("#horaPadrao").value = estado.config.horaPadrao;
-  renderFuncionarios();
-  renderTitulos();
-  renderDia();
-  renderResumo();
-  renderMes();
-  renderExtra();
-  renderIndividual();
+  function desenharTudo() {
+    // o navegador pode restaurar valores antigos nos campos de filtro ao reabrir a página;
+    // começamos sempre com "todos", senão a lista aparece vazia ou com 1 pessoa só
+    try {
+      if ($("#busca")) $("#busca").value = "";
+      if ($("#filtroFuncao")) $("#filtroFuncao").value = "";
+      if ($("#filtroSel")) $("#filtroSel").value = "todos";
+    } catch (e) {}
+    estado.selecionados = estado.selecionados || [];
+    montarSelectsData();
+    garantirConfigPresenca();
+    renderJornada();
+    renderRetorno();
+    renderSaidas();
+    if ($("#horaPadrao")) $("#horaPadrao").value = estado.config.horaPadrao;
+    renderFuncionarios();
+    renderTitulos();
+    renderDia();
+    renderResumo();
+    renderMes();
+    renderExtra();
+    renderIndividual();
+  }
+
+  /* ---------------- ponte para a nuvem (nuvem.js) ---------------- */
+  let desenhando = false;
+  function ligarNuvem() {
+    if (!window.CASNuvem) return;
+    window.CASPonto = {
+      estado: () => estado,
+      // troca os dados locais pelos da nuvem e redesenha a tela
+      aplicar: (dados, quem) => {
+        if (!dados || !Array.isArray(dados.funcionarios) || !dados.funcionarios.length) return;
+        desenhando = true;
+        // guarda os filtros/busca e a aba aberta para não pular a tela
+        const aba = ($(".tab.ativo") && $(".tab.ativo").dataset.tab) || "dia";
+        estado = normalizar(dados);
+        estado.listaVersao = LISTA_VERSAO;     // não re-sincroniza a lista do arquivo
+        estado.registrosImportados = 1;
+        salvarLocal();
+        desenharTudo();
+        if (aba && typeof trocarTab === "function") trocarTab(aba);
+        desenhando = false;
+        toast(quem ? `Dados recebidos do ${quem}.` : "Dados atualizados da nuvem.");
+      },
+      dispositivo: () => {
+        const u = navigator.userAgent || "";
+        if (/iPad|Tablet/i.test(u) || (/Android/i.test(u) && !/Mobi/i.test(u))) return "tablet";
+        if (/Mobi/i.test(u)) return "celular";
+        return "computador";
+      }
+    };
+    const selo = $("#statusNuvem");
+    function pintarSeloNuvem() {
+      if (!selo) return;
+      const ap = (window.CASNuvem.aparelhos && window.CASNuvem.aparelhos()) || {};
+      const nomes = Object.keys(ap);
+      if (!window.CASNuvem.ligada()) {
+        selo.className = "status nuvem off";
+        selo.textContent = "☁️ desligada";
+        selo.title = "Sem as chaves do Firebase os dados ficam só neste aparelho. Veja COMO-COLOCAR-NA-NUVEM.md";
+        return;
+      }
+      selo.className = "status nuvem on";
+      selo.textContent = nomes.length > 1 ? `☁️ ${nomes.length} aparelhos` : "☁️ nuvem";
+      selo.title = nomes.length
+        ? "Aparelhos que já gravaram:\n" + nomes.map((n) => "• " + n + " — " + new Date(ap[n]).toLocaleString("pt-BR")).join("\n")
+        : "Aguardando a primeira gravação";
+    }
+    window.CASNuvem.aoMudarStatus((txt, erro) => {
+      pintarSeloNuvem();
+      const el = $("#statusSalvo");
+      if (!el) return;
+      el.textContent = txt;
+      el.classList.toggle("pendente", !erro);
+      if (erro) el.style.color = "#c0392b"; else el.style.color = "";
+    });
+    window.CASNuvem.iniciar();
+    pintarSeloNuvem();
+    setInterval(pintarSeloNuvem, 5000);
+    if (!window.CASNuvem.configurada()) {
+      const el = $("#statusSalvo");
+      if (el) { el.textContent = "salvo"; el.classList.remove("pendente"); el.style.color = ""; }
+      return;
+    }
+    // ao abrir: se a nuvem tem a versão mais nova, ela manda
+    const localEm = Number(estado.atualizadoEm) || 0;
+    window.CASNuvem.baixar().then((dados) => {
+      if (!dados || !Array.isArray(dados.funcionarios) || !dados.funcionarios.length) {
+        salvar(true);            // primeira vez: manda o que existe aqui para a nuvem
+        return;
+      }
+      const nuvemEm = Number(dados.atualizadoEm) || 0;
+      if (nuvemEm > localEm) {
+        const quando = nuvemEm ? new Date(nuvemEm).toLocaleString("pt-BR") : "";
+        if (localEm && !confirm("A nuvem tem dados mais novos" + (quando ? " (" + quando + ")" : "") + ".\n\n" +
+            "OK = usar os dados da NUVEM\nCancelar = manter os dados DESTE aparelho e enviá-los para a nuvem")) {
+          salvar(true);          // fica com o deste aparelho e sobe para a nuvem
+          return;
+        }
+        window.CASPonto.aplicar(dados);
+      } else {
+        salvar(true);
+      }
+    });
+  }
+
+  desenharTudo();
+  ligarNuvem();
   salvar(true);
 })();
