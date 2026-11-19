@@ -87,6 +87,9 @@ body {
 .topo-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .status { font-size: 12px; color: var(--ok); background: var(--thead); border: 1px solid var(--linha); padding: 4px 10px; border-radius: 999px; }
 .status.pendente { color: var(--alerta); border-color: var(--linha-forte); }
+.status.nuvem { color: var(--suave); cursor: help; }
+.status.nuvem.on { color: var(--ok); }
+.status.nuvem.off { color: var(--alerta); }
 
 /* ---------- botões ---------- */
 .btn {
