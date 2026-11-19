@@ -2,8 +2,10 @@
 
 Sistema web de controle de ponto para a **CAS Construtora de Armazéns e Silos**.
 
-Site 100% estático (HTML + CSS + JavaScript), sem servidor e sem banco de dados:
-os dados ficam salvos no próprio navegador (`localStorage`).
+Site estático (HTML + CSS + JavaScript). Os dados ficam salvos no navegador
+(`localStorage`) **e na nuvem no Firebase Firestore**, para o computador, o tablet
+e o celular usarem a mesma base — passo a passo em **`COMO-COLOCAR-NA-NUVEM.md`**.
+Sem as chaves do Firebase o app funciona normalmente, só que apenas no próprio aparelho.
 
 ## Recursos
 
@@ -32,6 +34,9 @@ os dados ficam salvos no próprio navegador (`localStorage`).
 | `index.html` | Estrutura da página e as abas |
 | `estilo.css` | Estilos, tema claro/escuro e regras de impressão A4 |
 | `app.js` | Toda a lógica: lançamentos, cálculos, folhas, impressão |
+| `firebase-config.js` | **suas chaves** do Firebase (é o único arquivo que você edita) |
+| `nuvem.js` | sincronização com o Firestore (salvar, baixar, tempo real) |
+| `firestore.rules` | regras de segurança para colar no console do Firebase |
 | `funcionarios.js` | Lista inicial dos 38 funcionários (nome e função) |
 | `logo-cas.png` | Logo da empresa |
 
