@@ -111,6 +111,28 @@
     return c;
   }
 
+  /* ---- "impressão digital" dos DADOS (sem carimbos de hora) ----
+     Serve para saber se a nuvem e a tela são iguais de verdade.
+     Antes comparávamos o JSON inteiro, com os carimbos `at`, que mudam
+     a cada gravação — por isso a tela se redesenhava sem parar. */
+  function impressao(e) {
+    if (!e) return "";
+    const registros = {};
+    Object.keys(e.registros || {}).sort().forEach((dia) => {
+      const doDia = {};
+      Object.keys(e.registros[dia] || {}).sort().forEach((fid) => {
+        doDia[fid] = semCarimbo(e.registros[dia][fid]);
+      });
+      registros[dia] = doDia;
+    });
+    return JSON.stringify({
+      funcionarios: (e.funcionarios || []).map((f) => [f.id, f.nome, f.funcao, f.ativo !== false]),
+      registros,
+      config: e.config || {},
+      excluidos: e.excluidos || {}
+    });
+  }
+
   window.CASNuvemJuntar = juntar;   // usado pelo app.js também
 
   function marcarStatus(txt, erro) {
@@ -142,16 +164,25 @@
       if (d.aparelhos) aparelhos = Object.assign({}, aparelhos, d.aparelhos);
       const local = (window.CASPonto && window.CASPonto.estado && window.CASPonto.estado()) || null;
       if (!local) return;
-      if (JSON.stringify(dados) === JSON.stringify(local)) return;   // já é o que está na tela
+
+      // dados iguais de verdade: não mexe na tela (era aqui que ficava atualizando sem parar)
+      if (impressao(dados) === impressao(local)) return;
+
+      // a pessoa está digitando, com um campo aberto, ou a aba está escondida: espera
+      if (window.CASPonto.ocupado && window.CASPonto.ocupado()) {
+        marcarStatus("há novidades da nuvem — salvo ao sair do campo");
+        return;
+      }
+      if (document.hidden) return;
+
       const misturado = juntar(local, dados);
-      if (JSON.stringify(misturado) === JSON.stringify(local)) return; // nada novo para nós
+      if (impressao(misturado) === impressao(local)) return;   // nada novo para nós
+
       const quem = d.atualizadoPor && d.atualizadoPor !== (window.CASPonto.dispositivo && window.CASPonto.dispositivo())
         ? d.atualizadoPor : "";
       marcarStatus("recebendo do " + (quem || "outro aparelho") + "…");
       window.CASPonto.aplicar(misturado, quem);
       marcarStatus("nuvem atualizada");
-      // o que só existia aqui volta para a nuvem
-      if (JSON.stringify(misturado) !== JSON.stringify(dados)) enviar(misturado, true);
     }, (err) => {
       console.warn("Falha ao ler da nuvem:", err);
       marcarStatus("nuvem sem conexão", true);
@@ -215,6 +246,7 @@
     quandoFoiSalvo: () => ultimoEnviado,
     aparelhos: () => aparelhos,
     juntar,
+    impressao,
     aoMudarStatus: (fn) => { avisarTela = fn; }
   };
 })();
