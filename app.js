@@ -1575,21 +1575,18 @@
      - "periodo" : o período inteiro numa folha só (comportamento antigo) */
   function modoFolhaPeriodo() {
     const el = $("#modoPeriodoInd");
-    return (el && el.value) || "ciclo";
+    return (el && el.value) || "periodo";
   }
 
-  /** folhas que o período pede: cada item é uma folha (de, ate e o mês de referência) */
+  /** folhas que o período pede.
+      "porMes"  -> uma folha por mês-calendário (pode dar 2 ou 3 páginas)
+      "periodo" -> UMA folha só com todos os meses do período (padrão) */
   function folhasDoPeriodo(deISO, ateISO, modo) {
     const de = dataDeISO(deISO), ate = dataDeISO(ateISO);
     if (modo === "porMes") return mesesDoPeriodo(deISO, ateISO).map((x) => ({ de: x.de, ate: x.ate, a: x.a, m: x.m }));
-    if (modo === "periodo") {
-      return [{ de: dataISO(de.getFullYear(), de.getMonth() + 1, de.getDate()),
-                ate: dataISO(ate.getFullYear(), ate.getMonth() + 1, ate.getDate()),
-                a: de.getFullYear(), m: de.getMonth() + 1 }];
-    }
     return [{ de: dataISO(de.getFullYear(), de.getMonth() + 1, de.getDate()),
               ate: dataISO(ate.getFullYear(), ate.getMonth() + 1, ate.getDate()),
-              a: de.getFullYear(), m: de.getMonth() + 1 }];   // ciclo: o app já monta 26 → 25
+              a: de.getFullYear(), m: de.getMonth() + 1 }];
   }
 
   /* quebra um período em pedaços de UM mês: [{de:"2026-10-26", ate:"2026-10-31", a, m}, ...]
@@ -1879,8 +1876,13 @@
     renderListaSelecao();
 
     const per = periodoFolha(a, m);
-    cont.innerHTML = alvo.map((f) =>
-      folhaHTML(f, estado.funcionarios.findIndex((x) => x.id === f.id) + 1, a, m, per)).join("")
+    const modo = modoFolhaPeriodo();
+    const folhas = per ? folhasDoPeriodo(per.de, per.ate, modo) : [{ a, m }];
+    cont.innerHTML = alvo.map((f) => {
+      const num = estado.funcionarios.findIndex((x) => x.id === f.id) + 1;
+      return folhas.map((h) => folhaHTML(f, num, h.a, h.m, h.de ? h : null, null,
+        { porMes: modo === "porMes" })).join("");
+    }).join("")
       || `<p style="padding:24px;text-align:center;color:var(--suave)">Nenhum funcionário cadastrado.</p>`;
   }
 
@@ -1922,7 +1924,7 @@
       const ref = $("#indAte") && $("#indAte").value ? $("#indAte").value : isoDeHoje();
       const c = cicloDePonto(ref);
       periodoIndividual = null;          // o período já vem completo do ciclo
-      if ($("#modoPeriodoInd")) $("#modoPeriodoInd").value = "ciclo";
+      if ($("#modoPeriodoInd")) $("#modoPeriodoInd").value = "periodo";
       if ($("#indDe")) $("#indDe").value = c.de;
       if ($("#indAte")) $("#indAte").value = c.ate;
       renderPeriodoIndividual();
