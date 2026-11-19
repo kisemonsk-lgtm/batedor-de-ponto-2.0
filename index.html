@@ -298,6 +298,12 @@
       <label>&nbsp;</label>
       <button id="btnIndImprimir" class="btn" type="button">🖨 Imprimir folha</button>
       <button id="btnIndPDF" class="btn ghost" type="button">📄 Salvar PDF</button>
+      <label class="modo-folha"><span>Folha por</span>
+        <select id="modoPeriodoInd" title="Como dividir a folha quando o período pega mais de um mês">
+          <option value="porMes">Mês (um mês por folha)</option>
+          <option value="periodo">Período inteiro numa folha</option>
+        </select>
+      </label>
       <button id="btnIndTodosPDF" class="btn ghost" type="button" title="Um PDF só com todos os meses do período (De/Até), de todos os funcionários">📚 Vários meses em 1 PDF</button>
     </div>
   </div>
