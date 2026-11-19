@@ -1016,6 +1016,17 @@
     if (!h) { toast("Digite a hora de saída."); return; }
     marcarSaidaSelecionados(h);
   });
+  /* a legenda (F, AT, FE, FO, FZ) fecha ao clicar fora dela */
+  (function fecharLegenda() {
+    const det = document.getElementById("legendaOcorr");
+    if (!det) return;
+    document.addEventListener("click", (ev) => {
+      if (!det.open) return;
+      if (det.contains(ev.target)) return;
+      det.open = false;
+    });
+  })();
+
   $("#btnMarcarFolga").addEventListener("click", () => marcarOcorrenciaSelecionados("FO"));
   $("#btnMarcarFeriado").addEventListener("click", () => marcarOcorrenciaSelecionados("FZ"));
 
