@@ -531,3 +531,10 @@ table.fi-tabela td.d-num { width: 17mm; font-variant-numeric: tabular-nums; }
     print-color-adjust: exact;
   }
 }
+
+/* domingo na folha: a linha mostra a palavra "Domingo" no lugar do número */
+table.fi-tabela td.d-num { white-space: nowrap; }
+table.fi-tabela tr.linha-dom td.d-num { font-style: italic; font-weight: 700; letter-spacing: .2px; }
+@media print {
+  table.fi-tabela tr.linha-dom td { color: #000 !important; }
+}
