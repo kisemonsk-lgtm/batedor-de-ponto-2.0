@@ -1267,8 +1267,12 @@
     if (!window.html2canvas || !window.jspdf) { toast("Biblioteca de PDF não carregou — usando a impressão do navegador."); window.print(); return; }
 
     const num = estado.funcionarios.findIndex((x) => x.id === f.id) + 1;
-    const caixa = montarFolhaOculta(folhaHTML(f, num, a, m));
-    toast("Gerando PDF…");
+    const per = periodoFolha(a, m);
+    const modo = modoFolhaPeriodo();
+    const folhas = per ? folhasDoPeriodo(per.de, per.ate, modo) : [{ a, m }];
+    const caixa = montarFolhaOculta(folhas.map((h) => folhaHTML(f, num, h.a, h.m, h.de ? h : null, null,
+      { porMes: modo === "porMes" })).join(""));
+    toast(`Gerando PDF de ${folhas.length} folha(s)…`);
 
     try {
       // aguarda a logo carregar
@@ -1340,23 +1344,19 @@
     const larg = larguraPagina - margem * 2;
     const alturaUtil = alturaPagina - margem * 2;
 
-    // todos os meses que o período atravessa
-    const meses = [];
-    let cursor = new Date(dataDeISO(de).getFullYear(), dataDeISO(de).getMonth(), 1);
-    const fim = dataDeISO(ate);
-    while (cursor <= fim) {
-      meses.push({ a: cursor.getFullYear(), m: cursor.getMonth() + 1 });
-      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-    }
+    // uma folha por mês do período (ou o ciclo inteiro, conforme o modo escolhido)
+    const modo = modoFolhaPeriodo();
+    const folhas = folhasDoPeriodo(de, ate, modo);
 
-    toast(`Gerando PDF de ${alvo.length} folha(s)…`);
+    toast(`Gerando PDF de ${alvo.length * folhas.length} folha(s)…`);
     let primeira = true;
 
     try {
       for (const f of alvo) {
         const num = estado.funcionarios.findIndex((x) => x.id === f.id) + 1;
-        for (const { a, m } of meses) {
-          const html = folhaHTML(f, num, a, m, { de, ate });
+        for (const h of folhas) {
+          const a = h.a, m = h.m;
+          const html = folhaHTML(f, num, a, m, { de: h.de, ate: h.ate }, null, { porMes: modo === "porMes" });
           const caixa = montarFolhaOculta(html);
           await Promise.all(Array.from(caixa.querySelectorAll("img")).map((img) =>
             img.complete ? Promise.resolve() : new Promise((ok) => { img.onload = img.onerror = ok; })));
@@ -1387,7 +1387,7 @@
       }
       const nome = `folhas-ponto-${de}-a-${ate}.pdf`;
       pdf.save(nome);
-      toast(`PDF com ${alvo.length} folha(s) salvo.`);
+      toast(`PDF com ${alvo.length * folhas.length} folha(s) salvo.`);
     } catch (e) {
       console.error(e);
       toast("Não foi possível gerar o PDF — use Imprimir e escolha “Salvar como PDF”.");
@@ -1569,6 +1569,50 @@
   };
 
   /** lista de dias que aparecem na folha: mês inteiro ou período */
+  /* opções da folha individual: em quantos meses ela se divide
+     - "ciclo"   : uma folha só, do dia 26 ao dia 25 (ex.: 26/10 a 25/11)
+     - "porMes"  : uma folha por mês-calendário dentro do período
+     - "periodo" : o período inteiro numa folha só (comportamento antigo) */
+  function modoFolhaPeriodo() {
+    const el = $("#modoPeriodoInd");
+    return (el && el.value) || "ciclo";
+  }
+
+  /** folhas que o período pede: cada item é uma folha (de, ate e o mês de referência) */
+  function folhasDoPeriodo(deISO, ateISO, modo) {
+    const de = dataDeISO(deISO), ate = dataDeISO(ateISO);
+    if (modo === "porMes") return mesesDoPeriodo(deISO, ateISO).map((x) => ({ de: x.de, ate: x.ate, a: x.a, m: x.m }));
+    if (modo === "periodo") {
+      return [{ de: dataISO(de.getFullYear(), de.getMonth() + 1, de.getDate()),
+                ate: dataISO(ate.getFullYear(), ate.getMonth() + 1, ate.getDate()),
+                a: de.getFullYear(), m: de.getMonth() + 1 }];
+    }
+    return [{ de: dataISO(de.getFullYear(), de.getMonth() + 1, de.getDate()),
+              ate: dataISO(ate.getFullYear(), ate.getMonth() + 1, ate.getDate()),
+              a: de.getFullYear(), m: de.getMonth() + 1 }];   // ciclo: o app já monta 26 → 25
+  }
+
+  /* quebra um período em pedaços de UM mês: [{de:"2026-10-26", ate:"2026-10-31", a, m}, ...]
+     (m de 1 a 12) — usado no PDF de vários meses */
+  function mesesDoPeriodo(deISO, ateISO) {
+    const de = dataDeISO(deISO), ate = dataDeISO(ateISO);
+    const out = [];
+    let cursor = new Date(de.getFullYear(), de.getMonth(), 1);
+    while (cursor <= ate) {
+      const a = cursor.getFullYear(), m = cursor.getMonth() + 1;
+      const iniMes = new Date(a, m - 1, 1), fimMes = new Date(a, m, 0);
+      const de1 = de > iniMes ? de : iniMes;
+      const ate1 = ate < fimMes ? ate : fimMes;
+      out.push({
+        a, m,
+        de: dataISO(de1.getFullYear(), de1.getMonth() + 1, de1.getDate()),
+        ate: dataISO(ate1.getFullYear(), ate1.getMonth() + 1, ate1.getDate())
+      });
+      cursor = new Date(a, m, 1);
+    }
+    return out;
+  }
+
   /* dias da folha.
      - Sem período: dia 1 ao último do mês (a, m).
      - Com período: TODOS os dias do período, mesmo atravessando meses
@@ -1631,7 +1675,8 @@
 
   /** uma folha (página A4) por funcionário */
   /** folha individual: mês inteiro (dia 1 ao último dia) ou período De/Até */
-  function folhaHTML(f, num, a, m, periodo, periodoTexto) {
+  function folhaHTML(f, num, a, m, periodo, periodoTexto, opcoes) {
+    const opt = opcoes || {};
     const modoPeriodo = !!(periodo && periodo.de && periodo.ate);
     const carga = cargaDiariaMin();
     let tm, linhas = "", tituloDoc;
@@ -1639,7 +1684,10 @@
     if (modoPeriodo) {
       // o período inteiro numa folha só (ex.: 26/10/2026 a 25/11/2026)
       tm = totaisPeriodo(f.id, periodo.de, periodo.ate);
-      tituloDoc = `FOLHA DE PONTO INDIVIDUAL — ${fmtBR(periodo.de)} A ${fmtBR(periodo.ate)}`;
+      // vários meses: uma folha por mês, com o subtotal só daquele mês
+      tituloDoc = opt.porMes
+        ? `FOLHA DE PONTO INDIVIDUAL — ${MESES[m - 1].toUpperCase()} / ${a} (${fmtBR(periodo.de)} A ${fmtBR(periodo.ate)})`
+        : `FOLHA DE PONTO INDIVIDUAL — ${fmtBR(periodo.de)} A ${fmtBR(periodo.ate)}`;
     } else {
       const total = diasNoMes(a, m);
       tm = totaisMes(f.id, a, m - 1, total);       // totaisMes usa m de 0 a 11
@@ -1647,7 +1695,9 @@
     }
 
     let mesNaFolha = -1;   // para saber quando o mês vira dentro da folha
-    for (const dia of diasDaFolha(a, m, periodo)) {
+    let lista = diasDaFolha(a, m, periodo);
+    if (opt.porMes) lista = lista.filter((d) => d.m === m && d.a === a);   // um mês por folha
+    for (const dia of lista) {
       const d = dia.d, dm = dia.m, da = dia.a;
       const r = reg(f.id, da, dm - 1, d);          // reg() usa m de 0 a 11
       const sit = situacao(r);
@@ -1664,10 +1714,10 @@
       const ex = r ? minutosExtras(r, cargaDia) : 0;
 
       // faixa com o nome do mês: antes do dia 26 e antes do dia 1º de cada mês
-      if (modoPeriodo && (dm !== mesNaFolha) && (d === 26 || d === 1)) {
+      if (modoPeriodo && !opt.porMes && (dm !== mesNaFolha) && (d === 26 || d === 1)) {
         mesNaFolha = dm;
         linhas += `<tr class="linha-mes-folha"><td colspan="8">${MESES[dm - 1].toUpperCase()} / ${da}</td></tr>`;
-      } else if (modoPeriodo && dm !== mesNaFolha) {
+      } else if (modoPeriodo && !opt.porMes && dm !== mesNaFolha) {
         mesNaFolha = dm;   // período que começa no meio do mês: marca o mês na primeira linha
         linhas += `<tr class="linha-mes-folha"><td colspan="8">${MESES[dm - 1].toUpperCase()} / ${da}</td></tr>`;
       }
@@ -1871,7 +1921,8 @@
     b.addEventListener("click", () => {
       const ref = $("#indAte") && $("#indAte").value ? $("#indAte").value : isoDeHoje();
       const c = cicloDePonto(ref);
-      periodoIndividual = c;
+      periodoIndividual = null;          // o período já vem completo do ciclo
+      if ($("#modoPeriodoInd")) $("#modoPeriodoInd").value = "ciclo";
       if ($("#indDe")) $("#indDe").value = c.de;
       if ($("#indAte")) $("#indAte").value = c.ate;
       renderPeriodoIndividual();
@@ -1945,12 +1996,19 @@
       document.body.appendChild(quadro);
     }
 
+    // todas as folhas do período (um mês por folha, ou o ciclo inteiro)
+    const per = periodoFolha(a, m);
+    const modo = modoFolhaPeriodo();
+    const folhas = per ? folhasDoPeriodo(per.de, per.ate, modo) : [{ a, m }];
+    const corpo = folhas.map((h) => folhaHTML(f, num, h.a, h.m, h.de ? h : null, null,
+      { porMes: modo === "porMes" })).join("");
+
     const doc = quadro.contentWindow.document;
     doc.open();
     doc.write(`<!DOCTYPE html><html lang="pt-BR" data-tema="claro"><head><meta charset="utf-8">
       <title>Folha de ponto — ${escapar(f.nome).replace(/[<>&]/g, "")}</title>
       <style>${estiloImpressao()}</style></head>
-      <body>${folhaHTML(f, num, a, m)}</body></html>`);
+      <body>${corpo}</body></html>`);
     doc.close();
 
     const disparar = () => {
