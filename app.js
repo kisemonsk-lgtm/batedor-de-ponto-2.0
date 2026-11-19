@@ -1671,12 +1671,14 @@
 
       const mesCurto = MESES_CURTO[dm - 1];
       // no modo período a coluna mostra "26 Out", "01 Nov", "1º Nov"… para não confundir os meses
-      const rotuloDia = modoPeriodo
+      let rotuloDia = modoPeriodo
         ? (dia.primeiro ? `1º ${mesCurto}` : `${pad(d)} ${mesCurto}`)
         : pad(d);
+      // domingo: a linha já diz "Domingo" no lugar do número
+      if (wd === 0) rotuloDia = "Domingo";
 
       linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}${dia.primeiro ? " linha-dia1" : ""}">
-        <td class="d-num" title="${pad(d)}/${pad(dm)}/${da}">${rotuloDia}</td>
+        <td class="d-num" title="${pad(d)}/${pad(dm)}/${da}${wd === 0 ? " — domingo" : ""}">${rotuloDia}</td>
         <td>${r ? escapar(r.e || "") : ""}</td>
         <td>${r ? escapar(r.sa || "") : ""}</td>
         <td>${r ? escapar(r.r || "") : ""}</td>
