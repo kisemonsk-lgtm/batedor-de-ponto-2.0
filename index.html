@@ -40,7 +40,8 @@
     </div>
   </div>
   <div class="topo-acoes">
-    <span id="statusSalvo" class="status">salvo</span>
+    <span id="statusSalvo" class="status" title="O que está salvo e onde">salvo</span>
+    <span id="statusNuvem" class="status nuvem" title="Aparelhos que já gravaram na nuvem">☁️ nuvem</span>
     <button id="btnTema" class="btn ghost tema" type="button" title="Alternar modo claro/escuro" aria-label="Alternar modo claro/escuro">🌙</button>
     <button id="btnImprimir" class="btn ghost" type="button" title="Imprime o que está na tela">🖨 Imprimir</button>
     <button id="btnPDF" class="btn ghost" type="button" title="Salvar em PDF">📄 PDF</button>
@@ -390,6 +391,13 @@
 
 <script src="funcionarios.js"></script>
 <script src="registros-outubro.js"></script>
+
+<!-- nuvem (Firebase) — se as chaves não estiverem preenchidas, o app segue só no navegador -->
+<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="nuvem.js"></script>
+
 <script src="app.js"></script>
 </body>
 </html>
