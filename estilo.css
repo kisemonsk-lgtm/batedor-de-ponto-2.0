@@ -322,9 +322,11 @@ table.fi-tabela tfoot td { background: var(--thead); font-weight: 700; }
 .fi-resumo i { font-style: normal; font-size: 6.4pt; text-transform: uppercase; letter-spacing: .4px; color: var(--suave); }
 .fi-resumo b { font-size: 9pt; }
 .fi-resumo .fi-data { margin-left: auto; }
-.fi-assinaturas { display: flex; gap: 10mm; margin-top: 8mm; }
-.fi-ass { flex: 1; text-align: center; font-size: 7.6pt; color: var(--suave); }
-.fi-ass span { display: block; border-top: 1px solid var(--texto); margin-bottom: 1.2mm; height: 8mm; }
+.fi-assinaturas { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 8mm; }
+.fi-assinaturas td { border: 0; padding: 0; }
+.fi-ass { width: 44%; text-align: center; font-size: 7.6pt; color: var(--suave); vertical-align: bottom; }
+.fi-ass-sep { width: 12%; }
+.fi-ass span { display: block; border-top: 1px solid var(--texto); margin: 0 auto 1.2mm; height: 8mm; width: 100%; }
 .fi-rodape { display: none; }
 
 /* cadastro: barra de backup e tag novo */
@@ -396,7 +398,7 @@ table.fi-tabela tfoot td { background: var(--thead); font-weight: 700; }
   .fi-topo { flex-wrap: wrap; gap: 3mm; }
   .fi-mes { text-align: left; }
   .fi-campos { gap: 2mm 5mm; }
-  .fi-assinaturas { flex-direction: column; gap: 8mm; }
+  .fi-assinaturas { margin-top: 6mm; }   /* assinaturas seguem lado a lado, uma de cada ponta */
   .folha-individual { padding: 6mm 5mm; }
 }
 
