@@ -1262,9 +1262,12 @@
 
       const tela = await window.html2canvas(caixa, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const larguraPagina = 210, alturaPagina = 297;
-      const margem = 8;
+      // o PDF sai no tamanho escolhido: A4, A5 ou cartão 3 × 4 cm
+      const papel = estado.config.papel || "a4";
+      const formato = papel === "cartao" ? [30, 40] : (papel === "a5" ? "a5" : "a4");
+      const pdf = new jsPDF({ unit: "mm", format: formato, orientation: "portrait" });
+      const larguraPagina = pdf.internal.pageSize.getWidth(), alturaPagina = pdf.internal.pageSize.getHeight();
+      const margem = papel === "cartao" ? 1 : (papel === "a5" ? 5 : 8);
       const larg = larguraPagina - margem * 2;
       const alt = (tela.height * larg) / tela.width;
 
@@ -1314,8 +1317,11 @@
     if (!alvo.length) { toast("Nenhum funcionário para gerar."); return; }
 
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const larguraPagina = 210, alturaPagina = 297, margem = 8;
+    const papelTodos = estado.config.papel || "a4";
+    const formatoTodos = papelTodos === "cartao" ? [30, 40] : (papelTodos === "a5" ? "a5" : "a4");
+    const pdf = new jsPDF({ unit: "mm", format: formatoTodos, orientation: "portrait" });
+    const larguraPagina = pdf.internal.pageSize.getWidth(), alturaPagina = pdf.internal.pageSize.getHeight();
+    const margem = papelTodos === "cartao" ? 1 : (papelTodos === "a5" ? 5 : 8);
     const larg = larguraPagina - margem * 2;
     const alturaUtil = alturaPagina - margem * 2;
 
@@ -2039,11 +2045,33 @@
   });
 
   /* ---------------- jornada diária ---------------- */
+  /* ---------------- tamanho da folha impressa ---------------- */
+  function aplicarPapel(v) {
+    const papel = ["a4", "a5", "cartao"].includes(v) ? v : "a4";
+    document.documentElement.setAttribute("data-papel", papel);
+    estado.config.papel = papel;
+    try { localStorage.setItem("cas-papel", papel); } catch (e) {}
+    const sel = $("#cfgPapel");
+    if (sel) sel.value = papel;
+    return papel;
+  }
+  function renderPapel() {
+    let v = estado.config.papel;
+    try { v = v || localStorage.getItem("cas-papel") || "a4"; } catch (e) { v = v || "a4"; }
+    aplicarPapel(v);
+  }
+
   function renderJornada() {
     const v = String(estado.config.cargaDiaria || 7);
     const sel = $("#cfgJornada");
     sel.value = [...sel.options].some((o) => o.value === v) ? v : "7";
   }
+  $("#cfgPapel").addEventListener("change", (ev) => {
+    const papel = aplicarPapel(ev.target.value);
+    salvar(true);
+    toast(papel === "cartao" ? "Folha em cartão 3 × 4 cm." : "Folha em " + papel.toUpperCase() + ".");
+  });
+
   $("#cfgJornada").addEventListener("change", (ev) => {
     estado.config.cargaDiaria = Number(ev.target.value) || 7;
     salvar(true);
@@ -2141,6 +2169,7 @@
     montarSelectsData();
     garantirConfigPresenca();
     renderJornada();
+    renderPapel();
     renderRetorno();
     renderSaidas();
     if ($("#horaPadrao")) $("#horaPadrao").value = estado.config.horaPadrao;
