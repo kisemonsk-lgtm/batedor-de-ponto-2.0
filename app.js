@@ -1018,8 +1018,8 @@
   });
   /* a legenda (F, AT, FE, FO, FZ) fecha ao clicar fora dela */
   (function fecharLegenda() {
-    const det = document.getElementById("legendaOcorr");
-    if (!det) return;
+    const det = document.getElementById && document.getElementById("legendaOcorr");
+    if (!det || !det.contains) return;
     document.addEventListener("click", (ev) => {
       if (!det.open) return;
       if (det.contains(ev.target)) return;
@@ -1685,16 +1685,17 @@
       let rotuloDia = modoPeriodo
         ? (dia.primeiro ? `1º ${mesCurto}` : `${pad(d)} ${mesCurto}`)
         : pad(d);
-      // domingo: a linha já diz "Domingo" no lugar do número
-      if (wd === 0) rotuloDia = "Domingo";
+      // domingo: o número continua na coluna do dia e a palavra "Domingo"
+      // aparece na área da saída do almoço
+      const ehDomingo = wd === 0;
 
-      linhas += `<tr class="${wd === 0 ? "linha-dom" : ""}${dia.primeiro ? " linha-dia1" : ""}">
-        <td class="d-num" title="${pad(d)}/${pad(dm)}/${da}${wd === 0 ? " — domingo" : ""}">${rotuloDia}</td>
-        <td>${r ? escapar(r.e || "") : ""}</td>
-        <td>${r ? escapar(r.sa || "") : ""}</td>
-        <td>${r ? escapar(r.r || "") : ""}</td>
-        <td>${r ? escapar(r.s || "") : ""}</td>
-        <td class="d-tot">${r && r.e && r.s ? paraHoras(minutosTrabalhados(r, cargaDia) || 0) : ""}</td>
+      linhas += `<tr class="${ehDomingo ? "linha-dom" : ""}${dia.primeiro ? " linha-dia1" : ""}">
+        <td class="d-num" title="${pad(d)}/${pad(dm)}/${da}${ehDomingo ? " — domingo" : ""}">${rotuloDia}</td>
+        <td>${ehDomingo ? "" : (r ? escapar(r.e || "") : "")}</td>
+        <td class="d-dom">${ehDomingo ? "Domingo" : (r ? escapar(r.sa || "") : "")}</td>
+        <td>${ehDomingo ? "" : (r ? escapar(r.r || "") : "")}</td>
+        <td>${ehDomingo ? "" : (r ? escapar(r.s || "") : "")}</td>
+        <td class="d-tot">${!ehDomingo && r && r.e && r.s ? paraHoras(minutosTrabalhados(r, cargaDia) || 0) : ""}</td>
         <td class="d-ex">${ex ? "+" + paraHoras(ex) : ""}</td>
         <td class="d-oc">${["F", "AT", "FE", "FO", "FZ"].includes(sit) ? sit + (r && r.obs ? " — " + escapar(r.obs) : "") : (r && r.obs ? escapar(r.obs) : "")}</td>
       </tr>`;
