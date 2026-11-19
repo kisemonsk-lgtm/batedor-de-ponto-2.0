@@ -1240,9 +1240,10 @@
     .fi-resumo i { font-style: normal; font-size: 6.4pt; text-transform: uppercase; color: #444; }
     .fi-resumo b { font-size: 9pt; }
     .fi-resumo .fi-data { margin-left: auto; }
-    table.fi-assinaturas { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 8mm 0; margin-top: 9mm; }
-    table.fi-assinaturas td.fi-ass { width: 50%; text-align: center; vertical-align: bottom; font-size: 7.6pt; color: #333; padding: 0; border: 0; }
-    .fi-ass span { display: block; border-top: 1px solid #000; margin-bottom: 1.2mm; height: 10mm; }
+    table.fi-assinaturas { width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; margin-top: 9mm; }
+    table.fi-assinaturas td.fi-ass { width: 44%; text-align: center; vertical-align: bottom; font-size: 7.6pt; color: #333; padding: 0; border: 0; }
+    table.fi-assinaturas td.fi-ass-sep { width: 12%; border: 0; padding: 0; }
+    .fi-ass span { display: block; border-top: 1px solid #000; margin: 0 auto 1.2mm; height: 10mm; width: 100%; }
     .folha-individual td.falta, .folha-individual td.at, .folha-individual td.fe,
     .folha-individual td.fo, .folha-individual td.fz { color: #000 !important; font-weight: 700; }
   `;
@@ -1793,6 +1794,7 @@
 
       <table class="fi-assinaturas"><tr>
         <td class="fi-ass"><span></span>Assinatura do funcionário</td>
+        <td class="fi-ass-sep"></td>
         <td class="fi-ass"><span></span>Assinatura do responsável</td>
       </tr></table>
     </article>`;
