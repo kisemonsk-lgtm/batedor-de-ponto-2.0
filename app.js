@@ -377,7 +377,10 @@
   const FERIADOS = ["2026-11-02", "2026-11-15", "2026-11-20"];
 
   /* horários usados no lançamento em massa (podem ser trocados na tela) */
-  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30", sabado: "11:30" };
+  /* sábado: trabalha só a manhã, de 07:00 até 11:30 (sem almoço)
+     saSabado = saída do sábado; saAlmocoSabado = saída para o almoço no sábado */
+  const HORARIOS_PADRAO = { e: "07:00", sa: "11:30", r: "13:00", s: "16:30",
+    saSabado: "11:30", saAlmocoSabado: "11:30" };
 
   function chaveNome(nome) {
     return (nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -429,7 +432,8 @@
       sa: ler("#lpSaidaAlmoco", HORARIOS_PADRAO.sa),
       r: ler("#lpRetorno", HORARIOS_PADRAO.r),
       s: ler("#lpSaida", HORARIOS_PADRAO.s),
-      sabado: ler("#lpSaidaSabado", HORARIOS_PADRAO.sabado)
+      saSabado: ler("#lpSaidaSabado", HORARIOS_PADRAO.saSabado),
+      saAlmocoSabado: ler("#lpSaidaAlmocoSabado", HORARIOS_PADRAO.saAlmocoSabado)
     };
   }
 
@@ -456,8 +460,12 @@
         if (FERIADOS.includes(dataISO(a, m, d))) continue;  // feriado
         const r = garantirReg(f.id, a, m, d);
         if (r.marca === "F" || r.marca === "FE") continue;  // respeita falta/férias já lançadas
-        r.e = h.e; r.sa = h.sa; r.r = h.r;
-        r.s = data.getDay() === 6 ? h.sabado : h.s;
+        if (data.getDay() === 6) {          // sábado: 07:00 → 11:30 (sem almoço)
+          r.e = h.e; r.sa = h.saAlmocoSabado; r.r = ""; r.s = h.saSabado;
+          if (r.sa === r.s) r.sa = "";      // saída do almoço igual à saída do dia: não repete
+        } else {
+          r.e = h.e; r.sa = h.sa; r.r = h.r; r.s = h.s;
+        }
         r.marca = ""; r.extra = ""; r.fator = "";
         total++;
       }
@@ -482,8 +490,11 @@
         if (FERIADOS.includes(dataISO(a, m, d))) continue;
         const r = garantirReg(f.id, a, m, d);
         if (r.marca === "F" || r.marca === "FE") continue;
-        r.e = HORARIOS_PADRAO.e; r.sa = HORARIOS_PADRAO.sa; r.r = HORARIOS_PADRAO.r;
-        r.s = data.getDay() === 6 ? HORARIOS_PADRAO.sabado : HORARIOS_PADRAO.s;
+        if (data.getDay() === 6) {
+          r.e = HORARIOS_PADRAO.e; r.sa = HORARIOS_PADRAO.saAlmocoSabado; r.r = ""; r.s = HORARIOS_PADRAO.saSabado;
+        } else {
+          r.e = HORARIOS_PADRAO.e; r.sa = HORARIOS_PADRAO.sa; r.r = HORARIOS_PADRAO.r; r.s = HORARIOS_PADRAO.s;
+        }
         r.marca = ""; r.extra = ""; r.fator = "";
         total++;
       }
@@ -676,8 +687,8 @@
     const c = estado.config;
     const sabado = new Date(a, m, d).getDay() === 6;   // m é 0..11 (novembro = 10)
     r.e = hora || horaPadrao();        // 07:00
-    if (sabado) { r.sa = ""; r.r = ""; } else { r.sa = c.almocoPadrao; r.r = c.retornoPadrao; }
-    r.s = r.s || (sabado ? "11:30" : (c.saidaPadrao || "16:30"));   // sábado: até 11:30
+    if (sabado) { r.sa = "11:30"; r.r = ""; } else { r.sa = c.almocoPadrao; r.r = c.retornoPadrao; }
+    r.s = r.s || (sabado ? "11:30" : (c.saidaPadrao || "16:30"));   // sábado: sai para o almoço às 11:30 e encerra
     r.marca = "";
     return r;
   }
@@ -974,7 +985,8 @@
     if ($("#lpSaidaAlmoco") && !$("#lpSaidaAlmoco").value) $("#lpSaidaAlmoco").value = HORARIOS_PADRAO.sa;
     if ($("#lpRetorno") && !$("#lpRetorno").value) $("#lpRetorno").value = HORARIOS_PADRAO.r;
     if ($("#lpSaida") && !$("#lpSaida").value) $("#lpSaida").value = HORARIOS_PADRAO.s;
-    if ($("#lpSaidaSabado") && !$("#lpSaidaSabado").value) $("#lpSaidaSabado").value = HORARIOS_PADRAO.sabado;
+    if ($("#lpSaidaSabado") && !$("#lpSaidaSabado").value) $("#lpSaidaSabado").value = HORARIOS_PADRAO.saSabado;
+    if ($("#lpSaidaAlmocoSabado") && !$("#lpSaidaAlmocoSabado").value) $("#lpSaidaAlmocoSabado").value = HORARIOS_PADRAO.saAlmocoSabado;
   }
 
   function executarLancarPeriodo() {
@@ -987,7 +999,7 @@
     const escopo = sel.size ? `${sel.size} selecionado(s)` : `TODOS os ${estado.funcionarios.length} funcionários`;
     const h = horariosLancamento();
     const msg = `Lançar trabalho de ${de.split("-").reverse().join("/")} até ${ate.split("-").reverse().join("/")}\n` +
-      `para ${escopo}?\n\n${h.e}–${h.sa} / ${h.r}–${h.s} (sábado até ${h.sabado})\n` +
+      `para ${escopo}?\n\n${h.e}–${h.sa} / ${h.r}–${h.s} (sábado: ${h.e}–${h.saSabado}, sem almoço)\n` +
       `Sem domingos e sem feriados. Os dias já lançados serão substituídos.`;
     if (!confirm(msg)) return;
     lancarPeriodo(de, ate, sel, null);
