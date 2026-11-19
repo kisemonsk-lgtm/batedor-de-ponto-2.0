@@ -504,3 +504,30 @@ table.fi-tabela tfoot td { background: var(--thead); font-weight: 700; }
   html[data-papel="cartao"] .fi-ass { font-size: 2.4pt; }
   html[data-papel="cartao"] .fi-ass span { height: 3mm; margin-bottom: .3mm; }
 }
+
+/* =========================================================
+   CICLO DE PONTO (26 → 25): uma folha com dois meses
+   Faixa do mês antes do dia 26 e antes do dia 1º; dia 1º em destaque.
+   ========================================================= */
+table.fi-tabela tr.linha-mes-folha td {
+  background: var(--destaque, #1f6feb);
+  color: #fff;
+  font-weight: 700;
+  font-size: 7.4pt;
+  letter-spacing: .8px;
+  text-align: left;
+  padding: .9mm 2mm;
+  text-transform: uppercase;
+}
+table.fi-tabela tr.linha-dia1 td { font-weight: 700; }
+table.fi-tabela td.d-num { width: 17mm; font-variant-numeric: tabular-nums; }
+
+@media print {
+  table.fi-tabela tr.linha-mes-folha td {
+    background: #e5e5e5 !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
